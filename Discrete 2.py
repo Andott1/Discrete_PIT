@@ -1,158 +1,161 @@
+import sys
 import itertools
 import random
-from collections import Counter
 import requests
+import csv
+from collections import Counter
 from bs4 import BeautifulSoup
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QTextEdit, QFrame
-from PyQt5.QtGui import QFont
-from PyQt5.QtCore import Qt
-import qt_material
+from PyQt6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QPushButton, QLabel, QComboBox, QTableWidget, QTableWidgetItem, QCheckBox, QTextEdit, QFileDialog)
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
-# Generate all possible 6/49 combinations
-numbers = range(1, 50)
-LUCKY_NUMBERS = list(itertools.combinations(numbers, 6))
+# Lottery configurations
+LOTTERY_CONFIG = {"6/58": (1, 58), "6/55": (1, 55), "6/49": (1, 49), "6/45": (1, 45), "6/42": (1, 42)}
 
-# Function to fetch the last 5 Superlotto 6/49 winning numbers
-def fetch_latest_winning_numbers():
+def fetch_latest_winning_numbers(lottery_type):
     url = 'https://www.pcso.gov.ph/SearchLottoResult.aspx'
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, 'html.parser')
-    
-    winning_numbers_list = []
-    draw_dates = []
-    
-    for row in soup.find_all('tr'):
-        cols = row.find_all('td')
-        if len(cols) > 1:
-            game_type = cols[0].text.strip()
-            if 'Superlotto 6/49' in game_type:
-                draw_date = cols[2].text.strip()
-                winning_numbers = cols[1].text.strip().split('-')
-                try:
-                    winning_numbers_list.append([int(num) for num in winning_numbers])
-                    draw_dates.append(draw_date)
-                except ValueError:
-                    continue
+    results = []
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+        table = soup.find('table')
+        if not table:
+            return []
         
-        if len(winning_numbers_list) >= 5:
-            break
-    
-    return list(zip(draw_dates, winning_numbers_list))
+        for row in table.find_all('tr'):
+            cols = row.find_all('td')
+            if len(cols) < 2:
+                continue
+            game_type = cols[0].get_text(strip=True)
+            if lottery_type.replace("6/", "") in game_type:
+                winning_numbers = [num.zfill(2) for num in cols[1].get_text(strip=True).split('-') if num.isdigit()]
+                if winning_numbers:
+                    results.append('-'.join(winning_numbers))
+                if len(results) >= 3:
+                    break
+    except requests.RequestException as e:
+        print(f"Error fetching results: {e}")
+    return results
 
-# PyQt GUI class
-class LotteryApp(QWidget):
+class FetchResultsThread(QThread):
+    results_fetched = pyqtSignal(str)
+    
+    def __init__(self, lottery_type, lucky_numbers):
+        super().__init__()
+        self.lottery_type = lottery_type
+        self.lucky_numbers = lucky_numbers
+    
+    def run(self):
+        try:
+            recent_results = fetch_latest_winning_numbers(self.lottery_type)
+            results_text = "\n".join([f"Draw {i+1}: {res}" for i, res in enumerate(recent_results)])
+            matches = [set(self.lucky_numbers) & set(map(int, res.split('-'))) for res in recent_results]
+            match_text = "\n".join([f"Matches in Draw {i+1}: {'-'.join(map(lambda x: str(x).zfill(2), match))}" for i, match in enumerate(matches) if match])
+            result_text = f"<b>Recent Results:</b><br>{results_text}<br><br><b>{match_text}</b>" if recent_results else "<b>Recent Results:</b> No results found."
+        except Exception as e:
+            result_text = f"Error fetching results: {e}"
+        
+        self.results_fetched.emit(result_text)
+
+class LotteryAnalyzer(QWidget):
     def __init__(self):
         super().__init__()
-        self.dark_mode = True
-        self.latest_winning_numbers = fetch_latest_winning_numbers()
-        self.initUI()
-
-    def initUI(self):
-        self.setWindowTitle("Lucky Numbers Generator")
-        self.setGeometry(100, 100, 1100, 650)
-        self.apply_theme()
+        self.init_ui()
+    
+    def init_ui(self):
+        layout = QVBoxLayout()
         
-        main_layout = QHBoxLayout()
-        left_layout = QVBoxLayout()
-        right_layout = QVBoxLayout()
+        self.lottery_selector = QComboBox()
+        self.lottery_selector.addItems(LOTTERY_CONFIG.keys())
+        layout.addWidget(QLabel("Select Lottery Type:"))
+        layout.addWidget(self.lottery_selector)
         
-        # Left Column - Buttons & Lucky Numbers
-        self.label = QLabel("Click the button to get Lucky Numbers!")
-        self.label.setFont(QFont("Arial", 16, QFont.Bold))
-        self.label.setAlignment(Qt.AlignCenter)
-        left_layout.addWidget(self.label)
+        self.generate_button = QPushButton("Generate Lucky Numbers")
+        self.generate_button.clicked.connect(self.generate_lucky_numbers)
+        layout.addWidget(self.generate_button)
         
-        self.button = QPushButton("Generate Lucky Numbers")
-        self.button.setFont(QFont("Arial", 14, QFont.Bold))
-        self.button.clicked.connect(self.generate_lucky_numbers)
-        left_layout.addWidget(self.button)
+        self.lucky_numbers_label = QLabel("<b>Lucky Numbers:</b> ")
+        layout.addWidget(self.lucky_numbers_label)
         
-        self.toggle_button = QPushButton("Switch to Light Mode")
-        self.toggle_button.setFont(QFont("Arial", 14, QFont.Bold))
-        self.toggle_button.clicked.connect(self.toggle_theme)
-        left_layout.addWidget(self.toggle_button)
+        self.result_table = QTableWidget(0, 2)
+        self.result_table.setHorizontalHeaderLabels(["Number", "Frequency"])
+        layout.addWidget(self.result_table)
         
-        self.analysis_label = QLabel("Analysis: ")
-        self.analysis_label.setFont(QFont("Arial", 14, QFont.Bold))
-        self.analysis_label.setAlignment(Qt.AlignCenter)
-        self.analysis_label.setStyleSheet("color: #FF5733; background-color: #F5F5F5; padding: 10px; border-radius: 10px;")
-        left_layout.addWidget(self.analysis_label)
+        self.export_button = QPushButton("Export Data")
+        self.export_button.clicked.connect(self.export_data)
+        layout.addWidget(self.export_button)
         
-        self.latest_results_label = QLabel("Recent 5 Superlotto 6/49 Results:")
-        self.latest_results_label.setFont(QFont("Arial", 12, QFont.Bold))
-        left_layout.addWidget(self.latest_results_label)
+        self.combinations_display = QTextEdit()
+        self.combinations_display.setReadOnly(True)
+        layout.addWidget(QLabel("Randomly Picked 1000 Combinations:"))
+        layout.addWidget(self.combinations_display)
         
-        self.latest_results_text = QTextEdit()
-        self.latest_results_text.setReadOnly(True)
-        self.latest_results_text.setFont(QFont("Courier", 11))
-        left_layout.addWidget(self.latest_results_text)
+        self.recent_results_label = QLabel("<b>Recent Results:</b> ")
+        layout.addWidget(self.recent_results_label)
         
-        separator = QFrame()
-        separator.setFrameShape(QFrame.HLine)
-        separator.setFrameShadow(QFrame.Sunken)
-        left_layout.addWidget(separator)
+        self.dark_mode_toggle = QCheckBox("Dark Mode")
+        self.dark_mode_toggle.stateChanged.connect(self.toggle_dark_mode)
+        layout.addWidget(self.dark_mode_toggle)
         
-        # Right Column - Random Combinations & Frequency
-        self.text_combinations = QTextEdit()
-        self.text_combinations.setReadOnly(True)
-        self.text_combinations.setFont(QFont("Courier", 11))
-        right_layout.addWidget(self.text_combinations)
-        
-        self.text_frequency = QTextEdit()
-        self.text_frequency.setReadOnly(True)
-        self.text_frequency.setFont(QFont("Courier", 11))
-        right_layout.addWidget(self.text_frequency)
-        
-        left_layout.setAlignment(Qt.AlignTop)
-        main_layout.addLayout(left_layout, 2)
-        main_layout.addLayout(right_layout, 3)
-        
-        self.setLayout(main_layout)
-        self.display_latest_results()
+        self.setLayout(layout)
+        self.setWindowTitle("Lottery Number Frequency Analyzer")
+        self.setGeometry(100, 100, 550, 600)
     
     def generate_lucky_numbers(self):
-        self.random_picks = random.sample(LUCKY_NUMBERS, 1000)
-        all_numbers = [num for combo in self.random_picks for num in combo]
-        self.frequency = Counter(all_numbers)
-        lucky_draw = [num for num, count in self.frequency.most_common(6)]
+        lottery_type = self.lottery_selector.currentText()
+        min_num, max_num = LOTTERY_CONFIG[lottery_type]
         
-        self.label.setText(f"<span style='color: #FFD700; font-size: 18px; font-weight: bold;'>Lucky Numbers: {', '.join(map(str, lucky_draw))}</span>")
+        sampled_combinations = {tuple(sorted(random.sample(range(min_num, max_num + 1), 6))) for _ in range(2000)}
+        sampled_combinations = list(sampled_combinations)[:1000]
+        self.combinations_display.setText('\n'.join(map(str, sampled_combinations)))
         
-        combinations_text = "\n".join(map(str, self.random_picks))
-        self.text_combinations.setText(f"Random 1000 Combinations:\n{combinations_text}")
+        number_counter = Counter(num for comb in sampled_combinations for num in comb)
+        top_6 = [str(num).zfill(2) for num, _ in number_counter.most_common(6)]
         
-        frequency_text = "\n".join(f"{num}: {count}" for num, count in sorted(self.frequency.items()))
-        self.text_frequency.setText(f"Number Frequencies:\n{frequency_text}")
-        
-        if self.latest_winning_numbers:
-            self.analyze_against_winning_numbers(lucky_draw)
+        self.lucky_numbers_label.setText(f"Lucky Numbers: {'-'.join(top_6)}")
+        self.populate_table(number_counter)
+        self.fetch_recent_results(lottery_type, top_6)
     
-    def analyze_against_winning_numbers(self, lucky_draw):
-        analysis_text = ""
-        for draw_date, draw in self.latest_winning_numbers:
-            match_count = len(set(lucky_draw) & set(draw))
-            match_percentage = (match_count / 6) * 100
-            analysis_text += f"{draw_date}: {match_count} matches ({match_percentage:.2f}%)\n"
-        self.analysis_label.setText(f"Analysis:\n{analysis_text}")
+    def populate_table(self, number_counter):
+        self.result_table.setRowCount(len(number_counter))
+        for i, (num, freq) in enumerate(number_counter.most_common()):
+            self.result_table.setItem(i, 0, QTableWidgetItem(str(num)))
+            self.result_table.setItem(i, 1, QTableWidgetItem(str(freq)))
     
-    def display_latest_results(self):
-        results_text = "\n".join(
-            f"{draw[0]}: {', '.join(map(str, draw[1]))}" for draw in self.latest_winning_numbers
-        )
-        self.latest_results_text.setText(results_text)
+    def fetch_recent_results(self, lottery_type, lucky_numbers):
+        self.thread = FetchResultsThread(lottery_type, lucky_numbers)
+        self.thread.results_fetched.connect(self.recent_results_label.setText)
+        self.thread.start()
     
-    def toggle_theme(self):
-        self.dark_mode = not self.dark_mode
-        self.apply_theme()
-        self.toggle_button.setText("Switch to Dark Mode" if not self.dark_mode else "Switch to Light Mode")
+    def export_data(self):
+        file_path, _ = QFileDialog.getSaveFileName(self, "Save File", "", "CSV Files (*.csv)")
+        if file_path:
+            with open(file_path, "w", newline="") as file:
+                writer = csv.writer(file)
+                writer.writerow(["Number", "Frequency"])
+                for row in range(self.result_table.rowCount()):
+                    writer.writerow([self.result_table.item(row, 0).text(), self.result_table.item(row, 1).text()])
     
-    def apply_theme(self):
-        theme = "dark_teal.xml" if self.dark_mode else "light_blue.xml"
-        qt_material.apply_stylesheet(app, theme=theme)
+    def toggle_dark_mode(self, state):
+        dark_stylesheet = """
+            QWidget { background-color: #353535; color: white; }
+            QPushButton { background-color: #555; color: white; border-radius: 5px; }
+            QTableWidget { background-color: #252525; color: white; }
+            QHeaderView::section { background-color: #454545; color: white; }
+            QTableWidget QTableCornerButton::section { background-color: #454545; }
+        """
+        light_stylesheet = """
+            QWidget { background-color: white; color: black; }
+            QPushButton { background-color: #ddd; color: black; border-radius: 5px; }
+            QTableWidget { background-color: white; color: black; }
+            QHeaderView::section { background-color: transparent; color: black; }
+        """
+        self.setStyleSheet(dark_stylesheet if state == Qt.CheckState.Checked.value else light_stylesheet)
 
-# Run the application
-if __name__ == '__main__':
-    app = QApplication([])
-    window = LotteryApp()
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = LotteryAnalyzer()
     window.show()
-    app.exec_()
+    sys.exit(app.exec())
+
+#QTableWidget QTableCornerButton::section { background-color: #454545; }
