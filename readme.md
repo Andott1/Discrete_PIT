@@ -7,9 +7,9 @@ A Python application that generates lottery numbers and analyzes lottery results
 ## Features
 
 - Generate "lucky" lottery numbers for different lottery types (Ultra Lotto 6/58, Grand Lotto 6/55, etc.)
-- Fetch and display recent lottery results from PCSO website
+- Fetch and display recent lottery results from official PCSO website
 - Analyze number frequency patterns
-- Generate random combinations
+- Generate random "lucky" combinations
 - Export data to CSV
 - Professional UI with splash screen
 
@@ -34,21 +34,24 @@ The application requires the following Python packages:
 git clone https://github.com/Andott1/Discrete_PIT.git
 cd Discrete_PIT
 2. Install the required dependencies:
+pip install pyqt6
+pip install requests
+pip install bs4
 
 
 ## Running the Application
 
 To run the application, simply execute the main.py file:
 
-\`\`\`
+```
 python main.py
-\`\`\`
+```
 
 The application will start with a splash screen, followed by the main application window.
 
 ## Project Structure
 
-\`\`\`
+```
 lottery-number-generator/
 ├── assets/
 │   ├── Splash_Screen.png     # Splash screen image
@@ -65,7 +68,7 @@ lottery-number-generator/
 ├── main.py                   # Main application
 ├── requirements.txt          # Dependencies list
 └── README.md                 # This file
-\`\`\`
+```
 
 ## Usage
 
