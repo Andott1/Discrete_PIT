@@ -108,9 +108,9 @@ lottery-number-generator/
 
 To run the application in debug mode with additional logging:
 
-\`\`\`
+```
 python main.py --debug
-\`\`\`
+```
 
 ## Development
 
