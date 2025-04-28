@@ -31,12 +31,23 @@ The application requires the following Python packages:
 ### Installation Steps
 
 1. Clone or download this repository:
+
+```
 git clone https://github.com/Andott1/Discrete_PIT.git
 cd Discrete_PIT
+```
+
 2. Install the required dependencies:
-pip install pyqt6
-pip install requests
-pip install bs4
+
+```
+pip install pyqt6 requests bs4
+```
+
+or
+
+```
+pip install -r requirements.txt
+```
 
 
 ## Running the Application
