@@ -2,7 +2,7 @@
 
 A Python application that generates lottery numbers and analyzes lottery results. This application provides a user-friendly interface for generating "lucky" lottery numbers for different lottery types, fetching recent lottery results, and analyzing number frequency patterns.
 
-![Lottery Number Generator](assets/Splash_Screen.png)
+![Lottery Number Generator](Assets/Splash_Screen.png)
 
 ## Features
 
@@ -31,8 +31,8 @@ The application requires the following Python packages:
 ### Installation Steps
 
 1. Clone or download this repository:
-git clone [https://github.com/yourusername/lottery-number-generator.git](https://github.com/yourusername/lottery-number-generator.git)
-cd lottery-number-generator
+git clone https://github.com/Andott1/Discrete_PIT.git
+cd Discrete_PIT
 2. Install the required dependencies:
 
 
