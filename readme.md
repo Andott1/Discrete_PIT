@@ -2,7 +2,7 @@
 
 A Python application that generates lottery numbers and analyzes lottery results. This application provides a user-friendly interface for generating "lucky" lottery numbers for different lottery types, fetching recent lottery results, and analyzing number frequency patterns.
 
-![Lottery Number Generator](assets/splash_screen.png)
+![Lottery Number Generator](assets/Splash_Screen.png)
 
 ## Features
 
@@ -51,7 +51,7 @@ The application will start with a splash screen, followed by the main applicatio
 \`\`\`
 lottery-number-generator/
 ├── assets/
-│   ├── splash_screen.png     # Splash screen image
+│   ├── Splash_Screen.png     # Splash screen image
 │   └── lottery_ball.png      # Optional: Icon for buttons
 ├── config.py                 # Configuration constants
 ├── lottery_service.py        # Web scraping for lottery results
