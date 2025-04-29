@@ -2,6 +2,7 @@ import os
 import random
 import csv
 import sys
+import itertools
 from collections import Counter
 from config import LOTTERY_CONFIG
 
@@ -9,8 +10,8 @@ def generate_lucky_numbers(lottery_type):
     """Generate lucky numbers based on lottery type"""
     min_num, max_num = LOTTERY_CONFIG[lottery_type]
     
-    sampled_combinations = {tuple(sorted(random.sample(range(min_num, max_num + 1), 6))) for _ in range(2000)}
-    sampled_combinations = list(sampled_combinations)[:1000]
+    all_combinations = list(itertools.combinations(range(min_num, max_num + 1), 6))
+    sampled_combinations = random.sample(all_combinations, 1000)
     
     number_counter = Counter(num for comb in sampled_combinations for num in comb)
     

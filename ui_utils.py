@@ -65,6 +65,16 @@ def resize_and_center(widget):
     y = (screen_geometry.height() - height) // 2
     widget.move(x, y)
 
+def resize_widget_percent(widget, width_percent=0.2, height_percent=0.9):
+    """Resize a widget based on screen percentage"""
+    screen = QApplication.primaryScreen()
+    screen_size = screen.size()
+
+    width = int(screen_size.width() * width_percent)
+    height = int(screen_size.height() * height_percent)
+
+    widget.setFixedSize(width, height)
+
 def populate_table(table, number_counter):
     """Populate the frequency table with data"""
     table.setRowCount(len(number_counter))

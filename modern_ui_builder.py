@@ -1,14 +1,15 @@
 import os
 import random
+import sys
 from datetime import datetime
 from PyQt6.QtWidgets import (QVBoxLayout, QHBoxLayout, QPushButton, QLabel, 
                             QComboBox, QWidget, QFrame, QDateEdit, QDialog,
-                            QTableWidget, QTableWidgetItem, QHeaderView, QScrollArea, QApplication)
+                            QTableWidget, QTableWidgetItem, QHeaderView, QScrollArea, QApplication, QSpacerItem, QSizePolicy)
 from PyQt6.QtCore import Qt, QDate, QSize, QTimer
 from PyQt6.QtGui import QPixmap, QIcon, QFont, QPalette, QColor, QBrush, QLinearGradient, QPainter
 
 from config import LOTTERY_CONFIG
-from ui_utils import populate_table, display_recent_results, add_history
+from ui_utils import populate_table, display_recent_results, add_history, resize_widget_percent
 
 class BallWidget(QLabel):
     def __init__(self, number, ball_index, parent=None):
@@ -255,6 +256,21 @@ class ResultsDialog(QDialog):
         
         self.setLayout(layout)
 
+def restart_app():
+    try:
+        print("Restarting app in 2 seconds...")
+        python = sys.executable
+        script = sys.argv[0]
+        
+        # Add quotes around the script path to handle spaces
+        if ' ' in script:
+            script = f'"{script}"'
+
+        os.execl(python, python, script, *sys.argv[1:])
+    except Exception as e:
+        print(f"Failed to restart the app: {e}")
+        sys.exit(1)
+
 def build_modern_ui(parent):
     """Build a modern UI for the lottery application"""
     
@@ -314,6 +330,13 @@ def build_modern_ui(parent):
     
     # Create the top bar
     top_bar = QHBoxLayout()
+    top_bar.setContentsMargins(30, 30, 30, 0)
+
+    spacer_width = int(parent.width() * 0.015)
+
+    # Create a QSpacerItem with the calculated width
+    spacer = QSpacerItem(spacer_width, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
+    top_bar.addItem(spacer)
     
     # Back button
     back_button = QPushButton(" Back")
@@ -323,16 +346,25 @@ def build_modern_ui(parent):
             background-color: rgba(0, 0, 0, 0.5);
             color: white;
             border-radius: 15px;
-            padding: 8px 15px;
-            font-size: 14px;
+            padding: 1px 1px;
+            font-size: 18px;
             font-weight: bold;
         }
         QPushButton:hover {
             background-color: rgba(0, 0, 0, 0.7);
         }
     """)
-    back_button.clicked.connect(lambda: GroupInfoDialog(parent).exec())
+    back_button.clicked.connect(lambda: (parent.close(), restart_app()))
+
+    resize_widget_percent(back_button, width_percent=0.06, height_percent=0.04)
+
     top_bar.addWidget(back_button)
+
+    spacer_width = int(parent.width() * 0.125)
+
+    # Create a QSpacerItem with the calculated width
+    spacer = QSpacerItem(spacer_width, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
+    top_bar.addItem(spacer)
     
     # Group info button
     group_info_button = QPushButton("Group Info")
@@ -341,8 +373,8 @@ def build_modern_ui(parent):
             background-color: rgba(255, 255, 255, 0.2);
             color: white;
             border-radius: 15px;
-            padding: 8px 15px;
-            font-size: 14px;
+            padding: 1px 1px;
+            font-size: 18px;
             font-weight: bold;
         }
         QPushButton:hover {
@@ -350,8 +382,11 @@ def build_modern_ui(parent):
         }
     """)
     group_info_button.clicked.connect(lambda: GroupInfoDialog(parent).exec())
+
+    resize_widget_percent(group_info_button, width_percent=0.06, height_percent=0.04)
+
     top_bar.addWidget(group_info_button)
-    
+
     # Add a spacer
     top_bar.addStretch()
     
@@ -375,23 +410,34 @@ def build_modern_ui(parent):
     
     # Create the content area
     content_layout = QHBoxLayout()
+    content_layout.setContentsMargins(30, 0, 30, 30)  
     
     # Left sidebar
     sidebar = QFrame()
     sidebar.setStyleSheet("""
         background-color: rgba(0, 0, 30, 0.5);
-        border-radius: 15px;
-        margin: 20px;
-        padding: 20px;
+        border-radius: 25px;
+        margin: 10px;
+        padding: 10px;
     """)
-    sidebar.setFixedWidth(300)
-    
+
+    resize_widget_percent(sidebar, width_percent=0.175, height_percent=0.6)
     sidebar_layout = QVBoxLayout(sidebar)
+
+    sidebar_layout.setSpacing(0)  # Adjust spacing between widgets
+    sidebar_layout.setContentsMargins(10, 10, 10, 10)  # Set margins to reduce space around content
     
     # Lottery game section
     game_label = QLabel("Lottery Game")
-    game_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
+    game_label.setStyleSheet("""
+        color: white;
+        font-size: 21px;
+        font-weight: bold;
+        background-color: transparent;
+    """)
     sidebar_layout.addWidget(game_label)
+    game_label.setMinimumHeight(1)  # Set the minimum height for the label
+    #parent.lottery_selector.setMinimumHeight(40)  # Set the minimum height for the dropdown
     
     # Lottery game dropdown
     parent.lottery_selector = QComboBox()
@@ -399,24 +445,35 @@ def build_modern_ui(parent):
     parent.lottery_selector.setStyleSheet("""
         QComboBox {
             background-color: white;
-            border-radius: 15px;
-            padding: 8px 15px;
-            font-size: 14px;
+            border-radius: 15px;  /* Rounded corners for the combo box */
+            padding: 15px 15px;
+            font-size: 16px;
             font-weight: bold;
             color: #2a3990;
         }
         QComboBox::drop-down {
+            background-color: white;
+            border: 1px solid #2a3990;  /* Border for the dropdown button */
+            width: 20px;
             subcontrol-origin: padding;
             subcontrol-position: right center;
-            width: 25px;
-            border-left-width: 1px;
-            border-left-color: darkgray;
-            border-left-style: solid;
             border-top-right-radius: 15px;
-            border-bottom-right-radius: 15px;
+            border-bottom-right-radius: 15px;  /* Rounded corners for the dropdown button */
+        }
+        QComboBox QAbstractItemView {
+            background-color: white;
+            color: #2a3990;
+            selection-background-color: #FFA500;
+            selection-color: white;
+            border-radius: 15px;  /* Rounded corners for the dropdown list */
+        }
+        QComboBox::item {
+            padding: 10px;
+            border-radius: 15px;  /* Rounded corners for each item in the dropdown */
         }
     """)
     sidebar_layout.addWidget(parent.lottery_selector)
+    resize_widget_percent(parent.lottery_selector, width_percent=0.145, height_percent=0.065)
     
     # Add a separator
     separator = QFrame()
@@ -473,9 +530,6 @@ def build_modern_ui(parent):
     """)
     to_layout.addWidget(parent.to_date_edit)
     sidebar_layout.addLayout(to_layout)
-    
-    # Add some spacing
-    sidebar_layout.addSpacing(20)
     
     # Generate button
     parent.generate_button = QPushButton("GENERATE")
