@@ -65,20 +65,6 @@ def resize_and_center(widget):
     y = (screen_geometry.height() - height) // 2
     widget.move(x, y)
 
-def show_lucky_numbers_popup(lucky_numbers):
-    """Display a popup with the generated lucky numbers"""
-    # Create a message box
-    msg_box = QMessageBox()
-    msg_box.setWindowTitle("Generated Lucky Numbers")
-    msg_box.setIcon(QMessageBox.Icon.Information)
-    
-    # Set the message to show the lucky numbers
-    lucky_numbers_str = f"The lucky numbers are:\n{'-'.join(lucky_numbers)}"
-    msg_box.setText(lucky_numbers_str)
-
-    # Show the message box
-    msg_box.exec()
-
 def populate_table(table, number_counter):
     """Populate the frequency table with data"""
     table.setRowCount(len(number_counter))
