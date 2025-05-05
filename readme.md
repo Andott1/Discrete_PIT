@@ -89,6 +89,7 @@ lottery-number-generator/
 4. **View Results**: View the generated numbers, recent results, and frequency analysis
 5. **Export Data**: Export the data to a CSV file for further analysis
 
+
 ## Lottery Types Supported
 
 - Ultra Lotto 6/58
