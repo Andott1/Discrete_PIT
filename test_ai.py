@@ -1,7 +1,7 @@
 import sys
 import os
 import glob
-import itertools
+from itertools import combinations
 import random
 import requests
 import csv
@@ -1010,9 +1010,9 @@ class LotteryBall(QMainWindow):
             else:
                 self.second_row_layout.addWidget(ball)
 
-        lucky_label = QLabel("IS YOUR LUCKY COMBINATION")
+        lucky_label = QLabel("IS YOUR LUCKY COMBINATION!")
         lucky_label.setAlignment(Qt.AlignCenter)
-        lucky_label.setFont(QFont("Roboto", 14, QFont.Bold))
+        lucky_label.setFont(QFont("Roboto", 22, QFont.Bold))
         lucky_label.setStyleSheet("color: #333366;")
         lucky_layout.addWidget(lucky_label)
 
@@ -1208,10 +1208,16 @@ class LotteryBall(QMainWindow):
         lottery_type = self.lottery_dropdown.currentText()
         min_num, max_num = LOTTERY_CONFIG[lottery_type]
 
-        # Generate random combinations and pick top 6 numbers
-        sampled_combinations = {tuple(sorted(random.sample(range(min_num, max_num + 1), 6))) for _ in range(2000)}
-        sampled_combinations = list(sampled_combinations)[:1000]
+        # Generate all valid combinations
+        all_combinations = list(combinations(range(min_num, max_num + 1), 6))
+
+        # Randomly select 1000 unique combinations
+        sampled_combinations = random.sample(all_combinations, 1000)
+
+        # Count frequency of each number in the 1000 combinations
         number_counter = Counter(num for comb in sampled_combinations for num in comb)
+
+        # Pick top 6 most frequent numbers
         top_6 = [str(num).zfill(2) for num, _ in number_counter.most_common(6)]
         
         # Store the lucky numbers
@@ -1268,7 +1274,7 @@ class LotteryBall(QMainWindow):
 class BallWidget(QLabel):
     def __init__(self, number, ball_index, parent=None):
         super().__init__(parent)
-        self.setFixedSize(100, 100)
+        self.setFixedSize(200, 200)
         self.setAlignment(Qt.AlignCenter)
 
         self.number = number
@@ -1306,7 +1312,7 @@ class BallWidget(QLabel):
 
         # Draw centered number
         painter.setPen(Qt.GlobalColor.black)
-        painter.setFont(QFont("Figtree", 22, QFont.Weight.Bold))
+        painter.setFont(QFont("Roboto Condensed", 48, QFont.Weight.Black))
         painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, str(self.number))
 
 
