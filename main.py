@@ -681,7 +681,7 @@ class LotteryBall(QMainWindow):
         # Set image background for the main window
         self.setAutoFillBackground(True)
         
-        self.set_image_background(asset_manager.load_asset("Assets/Screens/main_screen.png"))
+        self.set_image_background(asset_manager.load_asset("Assets/Screens/main_screen_background.png"))
 
     def resize_window_to_percentage(self):
         # Get the screen's dimensions
