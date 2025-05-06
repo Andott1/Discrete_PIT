@@ -943,8 +943,9 @@ class LotteryBall(QMainWindow):
     def back_to_splash(self):   # Back button logic
         from SplashScreen import SplashScreen
         self.close()
-        self.splash = SplashScreen()
+        self.splash = SplashScreen(asset_manager=self.asset_manager)
         self.splash.show()
+        QTimer.singleShot(100, self.close)  # Close after new splash is shown
 
     def show_info_dialog(self): # Info button logic
         QMessageBox.information(
