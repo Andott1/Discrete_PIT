@@ -1,4 +1,12 @@
-# Lottery configurations
+import sys
+from PyQt5.QtWidgets import QApplication
+
+
+# Custom Packages
+from AssetManager import AssetManager
+from SplashScreen import SplashScreen
+
+# Lottery configurations from config.py
 LOTTERY_CONFIG = {
     "Ultra Lotto 6/58": (1, 58), 
     "Grand Lotto 6/55": (1, 55), 
@@ -21,3 +29,13 @@ LOTTERY_TYPE_MAP = {
     "Mega Lotto 6/45": "2",
     "Lotto 6/42": "13",
 }
+
+
+asset_manager = AssetManager()
+    
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    splash = SplashScreen(asset_manager=asset_manager)
+    splash.show()
+    sys.exit(app.exec_())

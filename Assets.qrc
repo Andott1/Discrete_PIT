@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/">
+        <file>Assets/Icons/down_icon.png</file>
+    </qresource>
+</RCC>
