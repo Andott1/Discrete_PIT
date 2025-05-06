@@ -8,7 +8,7 @@ import csv
 from datetime import datetime
 from collections import Counter
 from bs4 import BeautifulSoup
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QComboBox, QDateEdit,
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QComboBox, QDateEdit, QScrollArea, QGridLayout,
                              QHBoxLayout, QPushButton, QLabel, QLineEdit, QTableWidgetItem, QTableWidget, QAbstractItemView,
                              QFrame, QSizePolicy, QStackedWidget, QTextEdit, QDesktopWidget, QSpacerItem, QMessageBox, QFileDialog)
 from PyQt5.QtCore import Qt, QTimer, QPropertyAnimation, QRect, QEasingCurve, QDate, pyqtSignal, QThread, QRectF
@@ -142,51 +142,62 @@ class FetchResultsThread(QThread):
             table_data = []
         self.results_fetched.emit(table_data)
 
-def export_data_to_csv(file_path, lucky_numbers, frequency_table, combinations_table, recent_results_table, history_table):
-        """Export all data to a CSV file"""
-        with open(file_path, "w", newline="") as file:
-            writer = csv.writer(file)
-            
-            writer.writerow(["Lucky Numbers:", lucky_numbers])
-            writer.writerow([])
-            
-            writer.writerow(["Frequency Table:"])
-            writer.writerow(["Number", "Frequency"])
-            for row in range(frequency_table.rowCount()):
+def export_data_to_csv(file_path, lucky_numbers, frequency_data, combinations_table, recent_results_table, history_table):
+    """Export all data to a CSV file"""
+    with open(file_path, "w", newline="") as file:
+        writer = csv.writer(file)
+        
+        writer.writerow(["Lucky Numbers:", lucky_numbers])
+        writer.writerow([])
+        
+        writer.writerow(["Frequency Table:"])
+        writer.writerow(["Number", "Frequency"])
+        
+        # Handle the frequency data which is now a list of tuples
+        if isinstance(frequency_data, list):
+            # Sort by frequency (highest to lowest)
+            sorted_data = sorted(frequency_data, key=lambda x: int(x[1]) if x[1].isdigit() else 0, reverse=True)
+            for num, freq in sorted_data:
+                if freq != "0":  # Only include numbers with non-zero frequency
+                    writer.writerow([num, freq])
+        else:
+            # Handle the old table format for backward compatibility
+            for row in range(frequency_data.rowCount()):
                 writer.writerow([
-                    frequency_table.item(row, 0).text(),
-                    frequency_table.item(row, 1).text()
+                    frequency_data.item(row, 0).text(),
+                    frequency_data.item(row, 1).text()
                 ])
-            writer.writerow([])
+        
+        writer.writerow([])
 
-            if combinations_table:
-                writer.writerow(["Random 1000 Combinations:"])
-                writer.writerow(["Combination #", "Num1", "Num2", "Num3", "Num4", "Num5", "Num6"])
-                for row in range(combinations_table.rowCount()):
-                    writer.writerow([
-                        combinations_table.item(row, col).text()
-                        for col in range(combinations_table.columnCount())
-                    ])
-                writer.writerow([])
-            
-            writer.writerow(["Recent Results:"])
-            writer.writerow(["Draw", "1", "2", "3", "4", "5", "6"])
-            for row in range(recent_results_table.rowCount()):
+        if combinations_table:
+            writer.writerow(["Random 1000 Combinations:"])
+            writer.writerow(["Combination #", "Num1", "Num2", "Num3", "Num4", "Num5", "Num6"])
+            for row in range(combinations_table.rowCount()):
                 writer.writerow([
-                    recent_results_table.item(row, col).text()
-                    for col in range(recent_results_table.columnCount())
+                    combinations_table.item(row, col).text()
+                    for col in range(combinations_table.columnCount())
                 ])
             writer.writerow([])
+        
+        writer.writerow(["Recent Results:"])
+        writer.writerow(["Draw", "1", "2", "3", "4", "5", "6"])
+        for row in range(recent_results_table.rowCount()):
+            writer.writerow([
+                recent_results_table.item(row, col).text()
+                for col in range(recent_results_table.columnCount())
+            ])
+        writer.writerow([])
 
-            writer.writerow(["Lucky Numbers History:"])
-            writer.writerow(["Lotto Type", "1", "2", "3", "4", "5", "6"])
-            for row in range(history_table.rowCount()):
-                writer.writerow([
-                    history_table.item(row, col).text()
-                    for col in range(history_table.columnCount())
-                ])
-                
-        return True
+        writer.writerow(["Lucky Numbers History:"])
+        writer.writerow(["Lotto Type", "1", "2", "3", "4", "5", "6"])
+        for row in range(history_table.rowCount()):
+            writer.writerow([
+                history_table.item(row, col).text()
+                for col in range(history_table.columnCount())
+            ])
+            
+    return True
 
 # -----------------------------------------------
 # Resource Manager and Finder
@@ -1218,12 +1229,13 @@ class LotteryBall(QMainWindow):
     
     def create_stacked_widget(self):
         self.stacked_widget = QStackedWidget()
+        
+        # Initialize the number_labels dictionary
+        self.number_labels = {}
 
         # --------- Tab 1: Lucky Numbers ----------
-        lucky_tab = QWidget()
         lucky_tab = RoundedWidget(radius=20)
         lucky_layout = QVBoxLayout(lucky_tab)
-        
         lucky_layout.setSpacing(15)
 
         self.first_row_layout = QHBoxLayout()
@@ -1258,39 +1270,43 @@ class LotteryBall(QMainWindow):
 
         self.stacked_widget.addWidget(lucky_tab)
 
-        # --------- Tab 2: See More Details (Frequency Table) ----------
-        freq_tab = QWidget()
+        # --------- Tab 2: See More Details (Frequency Grid with Boxes) ----------
+        freq_tab = RoundedWidget(radius=20)
         freq_layout = QVBoxLayout(freq_tab)
-
-        # Create a QTableWidget to hold the frequency data
-        self.freq_table = QTableWidget()
-        self.freq_table.setColumnCount(2)  # 2 columns: Number and Frequency
-        self.freq_table.setHorizontalHeaderLabels(["Number", "Frequency"])
-        self.freq_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.freq_table.setSelectionMode(QAbstractItemView.NoSelection)
-        self.freq_table.setStyleSheet("""
-            QTableWidget {
-                background-color: rgba(255, 255, 255, 0.1);
-                color: #FFFFFF;
-                font-size: 14px;
-                border-radius: 10px;
-            }
-            QHeaderView::section {
-                background-color: #55557D;
-                color: white;
-                font-weight: bold;
-                padding: 4px;
-            }
-        """)
-
-        # Add the frequency table to the layout
-        freq_layout.addWidget(self.freq_table)
-
-        # Add the Tab to the stacked widget
+        
+        # Create a scroll area for the frequency grid
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setStyleSheet("background-color: transparent; border: none;")
+        
+        # Create a container widget for the grid
+        self.grid_container = QWidget()
+        self.grid_container.setStyleSheet("background-color: transparent;")
+        
+        # Create a grid layout for the frequency boxes
+        self.freq_grid = QGridLayout(self.grid_container)
+        self.freq_grid.setSpacing(10)
+        
+        # Set the grid container as the scroll area's widget
+        scroll_area.setWidget(self.grid_container)
+        
+        # Add the scroll area to the frequency tab layout
+        freq_layout.addWidget(scroll_area)
+        
+        # Add a label explaining the display
+        info_label = QLabel("Numbers are displayed with their frequency. Top 6 most frequent numbers are highlighted.")
+        info_label.setAlignment(Qt.AlignCenter)
+        info_label.setFont(QFont("Roboto", 12))
+        info_label.setStyleSheet("color: white; padding: 10px; background-color: rgba(55, 55, 150, 0);")
+        freq_layout.addWidget(info_label)
+        
+        # Initialize the frequency grid
+        self.update_frequency_grid()
+        
         self.stacked_widget.addWidget(freq_tab)
 
         # --------- Tab 3: Recent Lottery Results ----------
-        recent_tab = QWidget()
+        recent_tab = RoundedWidget(radius=20)
         recent_layout = QVBoxLayout(recent_tab)
 
         # Table setup
@@ -1302,16 +1318,21 @@ class LotteryBall(QMainWindow):
         self.recent_results_table.setSelectionMode(QAbstractItemView.NoSelection)
         self.recent_results_table.setStyleSheet("""
             QTableWidget {
-                background-color: rgba(255, 255, 255, 0.1);
-                color: #FFFFFF;
+                background-color: rgba(55, 55, 150, 0.3);
+                color: white;
                 font-size: 14px;
                 border-radius: 10px;
+                border: none;
             }
             QHeaderView::section {
-                background-color: #55557D;
+                background-color: rgba(55, 55, 150, 0.7);
                 color: white;
                 font-weight: bold;
-                padding: 4px;
+                padding: 6px;
+                border: none;
+            }
+            QTableWidget::item {
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             }
         """)
         recent_layout.addWidget(self.recent_results_table)
@@ -1319,7 +1340,7 @@ class LotteryBall(QMainWindow):
         self.stacked_widget.addWidget(recent_tab)
 
         # --------- Tab 4: History of Lucky Numbers ----------
-        history_tab = QWidget()
+        history_tab = RoundedWidget(radius=20)
         history_layout = QVBoxLayout(history_tab)
 
         self.history_table = QTableWidget()
@@ -1329,16 +1350,21 @@ class LotteryBall(QMainWindow):
         self.history_table.setSelectionMode(QAbstractItemView.NoSelection)
         self.history_table.setStyleSheet("""
             QTableWidget {
-                background-color: rgba(255, 255, 255, 0.1);
-                color: #FFFFFF;
+                background-color: rgba(55, 55, 150, 0.3);
+                color: white;
                 font-size: 14px;
                 border-radius: 10px;
+                border: none;
             }
             QHeaderView::section {
-                background-color: #55557D;
+                background-color: rgba(55, 55, 150, 0.7);
                 color: white;
                 font-weight: bold;
-                padding: 4px;
+                padding: 6px;
+                border: none;
+            }
+            QTableWidget::item {
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             }
         """)
         history_layout.addWidget(self.history_table)
@@ -1393,7 +1419,7 @@ class LotteryBall(QMainWindow):
             <span style="font-size: 16px; font-weight: regular; color: #333;">2. James Dominic Tion</span><br>
             <span style="font-size: 16px; font-weight: regular; color: #333;">3. Mariel Laplap</span><br>
             <span style="font-size: 16px; font-weight: regular; color: #333;">4. Gwynette Galleros</span><br>
-            <span style="font-size: 16px; font-weight: regular; color: #333;">5. Yasser Tomawis</span>
+            <span style="font-size: 16px; font-weight: regular; color: #333;">5. Jeff Justin Bonior</span>
             """,
             QMessageBox.Ok
         )
@@ -1438,6 +1464,113 @@ class LotteryBall(QMainWindow):
             table.setItem(i, 0, QTableWidgetItem(str(num)))
             table.setItem(i, 1, QTableWidgetItem(str(freq)))
 
+    def update_frequency_display(self, number_counter):
+        """Update the frequency display with the number frequencies."""
+        # Get the top 6 numbers based on frequency
+        top_6 = [num for num, _ in number_counter.most_common(6)]
+        
+        # Reset all boxes to default style first
+        for num, (box, freq_label) in self.number_labels.items():
+            box.setStyleSheet("""
+                QFrame {
+                    background-color: rgba(55, 55, 150, 0.5);
+                    border-radius: 10px;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                }
+            """)
+            
+            # Set frequency to 0 by default
+            freq_label.setText("0")
+        
+        # Update frequencies from the counter
+        for num, freq in number_counter.items():
+            if num in self.number_labels:
+                box, freq_label = self.number_labels[num]
+                freq_label.setText(str(freq))
+                
+                # Highlight top 6 numbers
+                if num in top_6:
+                    box.setStyleSheet("""
+                        QFrame {
+                            background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                            stop: 0 rgba(255, 210, 80, 0.9),
+                                            stop: 1 rgba(245, 115, 35, 0.9));
+                            border-radius: 10px;
+                            border: 2px solid white;
+                        }
+                    """)
+
+    def on_lottery_selection_changed(self):
+        """Triggered when the lottery type selection changes"""
+        self.selected_lottery_type = self.lottery_dropdown.currentText()
+        
+        # Update the frequency grid for the new lottery type
+        self.update_frequency_grid()
+        
+        # Check and fetch results for the new lottery type
+        self.check_and_fetch_results()
+
+    def update_frequency_grid(self):
+        """Update the frequency grid based on the current lottery type"""
+        # Clear the existing grid
+        if hasattr(self, 'freq_grid') and self.freq_grid:
+            # Remove all widgets from the grid
+            while self.freq_grid.count():
+                item = self.freq_grid.takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
+        
+        # Clear the number_labels dictionary
+        self.number_labels = {}
+        
+        # Get the lottery type and its range
+        lottery_type = self.selected_lottery_type
+        min_num, max_num = LOTTERY_CONFIG[lottery_type]
+        
+        # Create number boxes for the grid
+        cols = 10  # Number of columns in the grid
+        for num in range(min_num, max_num + 1):
+            row = (num - 1) // cols
+            col = (num - 1) % cols
+            
+            # Create a box for each number
+            box = QFrame()
+            box.setFixedSize(60, 60)
+            box.setStyleSheet("""
+                QFrame {
+                    background-color: rgba(55, 55, 150, 0.5);
+                    border-radius: 10px;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                }
+            """)
+            
+            # Create layout for the box
+            box_layout = QVBoxLayout(box)
+            box_layout.setContentsMargins(5, 5, 5, 5)
+            box_layout.setSpacing(2)
+            
+            # Number label
+            num_label = QLabel(str(num))
+            num_label.setAlignment(Qt.AlignCenter)
+            num_label.setFont(QFont("Roboto", 16, QFont.Bold))
+            num_label.setStyleSheet("color: white; background-color: transparent; border: none;")
+            
+            # Frequency label
+            freq_label = QLabel("0")
+            freq_label.setAlignment(Qt.AlignCenter)
+            freq_label.setFont(QFont("Roboto", 12))
+            freq_label.setStyleSheet("color: white; background-color: transparent; border: none;")
+            
+            # Add labels to box
+            box_layout.addWidget(num_label)
+            box_layout.addWidget(freq_label)
+            
+            # Add box to grid
+            self.freq_grid.addWidget(box, row, col)
+            
+            # Store reference to the box and frequency label
+            self.number_labels[num] = (box, freq_label)
+
     # Connected to GENERATE Button
     def generate_lucky_numbers(self):
         # Disable the generate button while processing
@@ -1471,8 +1604,13 @@ class LotteryBall(QMainWindow):
         for i, (widget, num_str) in enumerate(zip(self.lottery_balls, top_6)):
             widget.update_number(num_str, ball_indices[i])
 
-        # Update the frequency table with the number counter
-        self.populate_table(self.freq_table, number_counter)
+        # Make sure the frequency grid is updated for the current lottery type
+        if lottery_type != self.selected_lottery_type:
+            self.selected_lottery_type = lottery_type
+            self.update_frequency_grid()
+
+        # Update the frequency display with the number counter
+        self.update_frequency_display(number_counter)
         self.add_history(self.history_table, lottery_type, top_6)
 
         # Re-enable the button
@@ -1487,10 +1625,16 @@ class LotteryBall(QMainWindow):
             # Collect numbers from the ball widgets
             numbers = [ball.number for ball in self.lottery_balls]
             
+            # Create a frequency data structure from the number_labels
+            frequency_data = []
+            for num, (_, freq_label) in sorted(self.number_labels.items()):
+                frequency = freq_label.text()
+                frequency_data.append((str(num), frequency))
+            
             success = export_data_to_csv(
                 file_path,
                 f"Lucky Numbers: {'-'.join(numbers)}",
-                self.freq_table,
+                frequency_data,  # Pass the frequency data instead of freq_table
                 None,  # No combinations table in new UI (set to None)
                 self.recent_results_table,
                 self.history_table  # Internal QTableWidget used for history
