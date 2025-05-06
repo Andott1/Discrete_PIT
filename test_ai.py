@@ -136,10 +136,17 @@ class FetchResultsThread(QThread):
             recent_results = fetch_latest_winning_numbers(self.lottery_type, self.from_date, self.to_date)
             table_data = []
             for draw_date, res in recent_results:
-                row = [draw_date] + res  # Use draw date as label
+                # Make sure we have exactly 6 numbers (pad if necessary)
+                numbers = res[:6]
+                while len(numbers) < 6:
+                    numbers.append("")
+                
+                row = [draw_date] + numbers
                 table_data.append(row)
         except Exception as e:
+            print(f"Error fetching results: {e}")
             table_data = []
+        
         self.results_fetched.emit(table_data)
 
 def export_data_to_csv(file_path, lucky_numbers, frequency_data, combinations_table, recent_results_table, history_table):
@@ -1217,9 +1224,9 @@ class LotteryBall(QMainWindow):
         # Button logic
         self.tab_titles = [
             "Lucky Numbers",
-            "See More Details",
+            "Number Frequency",
             "Recent Lottery Results",
-            "History of Generated Lucky Numbers"
+            "Lucky Numbers History"
         ]
         self.current_tab_index = 0
         self.prev_button.clicked.connect(self.show_previous_tab)
@@ -1308,73 +1315,118 @@ class LotteryBall(QMainWindow):
         # --------- Tab 3: Recent Lottery Results ----------
         recent_tab = RoundedWidget(radius=20)
         recent_layout = QVBoxLayout(recent_tab)
+        recent_layout.setContentsMargins(15, 15, 15, 15)
+        recent_layout.setSpacing(15)
 
-        # Table setup
-        self.recent_results_table = QTableWidget()
-        self.recent_results_table.setColumnCount(7)  # Adjust as needed
-        self.recent_results_table.setHorizontalHeaderLabels(["Date", "1", "2", "3", "4", "5", "6"])
-        self.recent_results_table.horizontalHeader().setStretchLastSection(True)
-        self.recent_results_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.recent_results_table.setSelectionMode(QAbstractItemView.NoSelection)
-        self.recent_results_table.setStyleSheet("""
-            QTableWidget {
-                background-color: rgba(55, 55, 150, 0.3);
-                color: white;
-                font-size: 14px;
-                border-radius: 10px;
+        # Create a scroll area for the results
+        results_scroll = QScrollArea()
+        results_scroll.setWidgetResizable(True)
+        results_scroll.setStyleSheet("""
+            QScrollArea {
+                background-color: transparent;
                 border: none;
             }
-            QHeaderView::section {
-                background-color: rgba(55, 55, 150, 0.7);
-                color: white;
-                font-weight: bold;
-                padding: 6px;
-                border: none;
+            QScrollBar:vertical {
+                background: rgba(255, 255, 255, 0.1);
+                width: 10px;
+                margin: 0px;
             }
-            QTableWidget::item {
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            QScrollBar::handle:vertical {
+                background: rgba(255, 255, 255, 0.3);
+                min-height: 20px;
+                border-radius: 5px;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
             }
         """)
-        recent_layout.addWidget(self.recent_results_table)
+
+        # Create a container widget for the results
+        results_container = QWidget()
+        results_container.setStyleSheet("background-color: transparent;")
+        self.results_layout = QVBoxLayout(results_container)
+        self.results_layout.setSpacing(15)
+        self.results_layout.setContentsMargins(5, 5, 5, 5)
+
+        # Add a placeholder message when no results are available
+        self.no_results_label = QLabel("No recent results available. Use the 'Get Recent Results' button to fetch data.")
+        self.no_results_label.setAlignment(Qt.AlignCenter)
+        self.no_results_label.setFont(QFont("Roboto", 14))
+        self.no_results_label.setStyleSheet("color: rgba(255, 255, 255, 0.7); padding: 20px;")
+        self.no_results_label.setWordWrap(True)
+        self.results_layout.addWidget(self.no_results_label)
+
+        # Set the container as the scroll area's widget
+        results_scroll.setWidget(results_container)
+
+        # Add the scroll area to the tab layout
+        recent_layout.addWidget(results_scroll)
 
         self.stacked_widget.addWidget(recent_tab)
 
         # --------- Tab 4: History of Lucky Numbers ----------
         history_tab = RoundedWidget(radius=20)
         history_layout = QVBoxLayout(history_tab)
+        history_layout.setContentsMargins(15, 15, 15, 15)
+        history_layout.setSpacing(15)
 
+        # Create a scroll area for the history
+        history_scroll = QScrollArea()
+        history_scroll.setWidgetResizable(True)
+        history_scroll.setStyleSheet("""
+            QScrollArea {
+                background-color: transparent;
+                border: none;
+            }
+            QScrollBar:vertical {
+                background: rgba(255, 255, 255, 0.1);
+                width: 10px;
+                margin: 0px;
+            }
+            QScrollBar::handle:vertical {
+                background: rgba(255, 255, 255, 0.3);
+                min-height: 20px;
+                border-radius: 5px;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+        """)
+
+        # Create a container widget for the history
+        history_container = QWidget()
+        history_container.setStyleSheet("background-color: transparent;")
+        self.history_cards_layout = QVBoxLayout(history_container)
+        self.history_cards_layout.setSpacing(15)
+        self.history_cards_layout.setContentsMargins(5, 5, 5, 5)
+
+        # Add a placeholder message when no history is available
+        self.no_history_label = QLabel("No history available. Generate lucky numbers to see them here.")
+        self.no_history_label.setAlignment(Qt.AlignCenter)
+        self.no_history_label.setFont(QFont("Roboto", 14))
+        self.no_history_label.setStyleSheet("color: rgba(255, 255, 255, 0.7); padding: 20px;")
+        self.no_history_label.setWordWrap(True)
+        self.history_cards_layout.addWidget(self.no_history_label)
+
+        # Set the container as the scroll area's widget
+        history_scroll.setWidget(history_container)
+
+        # Add the scroll area to the tab layout
+        history_layout.addWidget(history_scroll)
+
+        # Create a hidden table for CSV export compatibility
         self.history_table = QTableWidget()
         self.history_table.setColumnCount(7)
         self.history_table.setHorizontalHeaderLabels(["Lotto Type", "1", "2", "3", "4", "5", "6"])
-        self.history_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.history_table.setSelectionMode(QAbstractItemView.NoSelection)
-        self.history_table.setStyleSheet("""
-            QTableWidget {
-                background-color: rgba(55, 55, 150, 0.3);
-                color: white;
-                font-size: 14px;
-                border-radius: 10px;
-                border: none;
-            }
-            QHeaderView::section {
-                background-color: rgba(55, 55, 150, 0.7);
-                color: white;
-                font-weight: bold;
-                padding: 6px;
-                border: none;
-            }
-            QTableWidget::item {
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            }
-        """)
-        history_layout.addWidget(self.history_table)
+        self.history_table.hide()  # Hide the table as we're using cards instead
 
         self.stacked_widget.addWidget(history_tab)
 
         return self.stacked_widget
     
     def add_history(self, table, lottery_type, lucky_numbers, mirror_table=None):
-        """Add a new entry to the history table and optionally mirror it"""
+        """Add a new entry to the history table and the history cards layout"""
+        # Add to the hidden table for CSV export
         row_count = table.rowCount()
         table.insertRow(row_count)
         table.setItem(row_count, 0, QTableWidgetItem(lottery_type))
@@ -1387,6 +1439,83 @@ class LotteryBall(QMainWindow):
             mirror_table.setItem(mirror_row, 0, QTableWidgetItem(lottery_type))
             for i, num in enumerate(lucky_numbers):
                 mirror_table.setItem(mirror_row, i + 1, QTableWidgetItem(num))
+        
+        # Remove the placeholder if it exists
+        if hasattr(self, 'no_history_label') and self.no_history_label.isVisible():
+            self.no_history_label.setVisible(False)
+        
+        # Create a card for the history entry
+        history_card = QFrame()
+        history_card.setStyleSheet("""
+            QFrame {
+                background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                            stop: 0 rgba(55, 55, 150, 0.7),
+                            stop: 1 rgba(60, 85, 180, 0.7));
+                border-radius: 15px;
+                padding: 5px;
+            }
+            QFrame:hover {
+                background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                            stop: 0 rgba(60, 85, 180, 0.8),
+                            stop: 1 rgba(70, 95, 200, 0.8));
+            }
+        """)
+        
+        card_layout = QVBoxLayout(history_card)
+        card_layout.setSpacing(10)
+        
+        # Lottery type
+        type_label = QLabel(f"Lottery Type: {lottery_type}")
+        type_label.setFont(QFont("Roboto", 16, QFont.Bold))
+        type_label.setStyleSheet("color: white; background: rgba(255, 255, 255, 0)")
+        type_label.setAlignment(Qt.AlignCenter)
+        card_layout.addWidget(type_label)
+        
+        # Numbers container
+        numbers_widget = QWidget()
+        numbers_layout = QHBoxLayout(numbers_widget)
+        numbers_layout.setSpacing(0)
+        numbers_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Generate random ball indices
+        # Method 1: Using a similar approach to display_recent_results
+        # Use a random seed based on the current time to ensure different randomization each time
+        random_seed = int(datetime.now().timestamp())
+        random.seed(random_seed)
+        
+        # Method 2: Shuffle a list of indices
+        ball_indices = list(range(1, 7))  # Indices 1-6
+        random.shuffle(ball_indices)
+        
+        # Add lottery balls for each number using BallWidget with custom size
+        for i, num in enumerate(lucky_numbers):
+            # Method 1: Generate a random index using a formula
+            # ball_index = (random_seed + i) % 6 + 1
+            
+            # Method 2: Use the shuffled indices
+            ball_index = ball_indices[i]
+            
+            # Create a BallWidget with custom size and font size
+            ball = BallWidget(num, ball_index, size=100, font_size=24)
+            
+            numbers_layout.addWidget(ball)
+
+        # Center the numbers
+        numbers_layout.addStretch()
+        numbers_layout.insertStretch(0)
+        
+        card_layout.addWidget(numbers_widget)
+        
+        # Add timestamp
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        time_label = QLabel(f"Generated: {timestamp}")
+        time_label.setFont(QFont("Roboto Medium", 10))
+        time_label.setStyleSheet("color: rgba(255, 255, 255, 0.7); background: rgba(255, 255, 255, 0)")
+        time_label.setAlignment(Qt.AlignRight)
+        card_layout.addWidget(time_label)
+        
+        # Add the card to the history layout at the top (newest first)
+        self.history_cards_layout.insertWidget(0, history_card)
 
     def show_next_tab(self):
         # Increment tab index and wrap around using modulo if necessary
@@ -1447,13 +1576,103 @@ class LotteryBall(QMainWindow):
         super().resizeEvent(event)
         
     def display_recent_results(self, recent_results):
-        # Clear previous results before displaying new ones
-        self.recent_results_table.setRowCount(0)
+        """Display recent lottery results in a card-based layout with BallWidget"""
+        # Clear previous results
+        while self.results_layout.count():
+            item = self.results_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        
+        # Show placeholder if no results
+        if not recent_results:
+            self.no_results_label = QLabel("No recent results available. Use the 'Get Recent Results' button to fetch data.")
+            self.no_results_label.setAlignment(Qt.AlignCenter)
+            self.no_results_label.setFont(QFont("Roboto", 14))
+            self.no_results_label.setStyleSheet("color: rgba(255, 255, 255, 0.7); padding: 20px;")
+            self.no_results_label.setWordWrap(True)
+            self.results_layout.addWidget(self.no_results_label)
+            return
+        
+        # Add result cards
+        for i, result_data in enumerate(recent_results):
+            # Create a card for each result
+            result_card = QFrame()
+            result_card.setStyleSheet("""
+                QFrame {
+                    background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 rgba(55, 55, 150, 0.7),
+                                stop: 1 rgba(60, 85, 180, 0.7));
+                    border-radius: 15px;
+                    padding: 5px;
+                }
+                QFrame:hover {
+                    background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 rgba(60, 85, 180, 0.8),
+                                stop: 1 rgba(70, 95, 200, 0.8));
+                }
+            """)
+            
+            card_layout = QVBoxLayout(result_card)
+            card_layout.setSpacing(10)
+            
+            # Draw date
+            draw_date = result_data[0]
+            date_label = QLabel(f"Draw Date: {draw_date}")
+            date_label.setFont(QFont("Roboto", 16, QFont.Bold))
+            date_label.setStyleSheet("color: white; background: rgba(255, 255, 255, 0);")
+            date_label.setAlignment(Qt.AlignCenter)
+            card_layout.addWidget(date_label)
+            
+            # Numbers container
+            numbers_widget = QWidget()
+            numbers_layout = QHBoxLayout(numbers_widget)
+            numbers_layout.setSpacing(0)
+            numbers_layout.setContentsMargins(0, 0, 0, 0)
+            
+            # Add lottery balls for each number using BallWidget with custom size
+            for j in range(1, min(7, len(result_data))):
+                number = result_data[j]
+                if number:  # Only create a ball if there's a number
+                    # Create a random ball index (1-6)
+                    ball_index = (i + j) % 6 + 1
+                    
+                    # Create a BallWidget with custom size and font size
+                    ball = BallWidget(number, ball_index, size=100, font_size=24)
+                    
+                    numbers_layout.addWidget(ball)
+            
+            # Center the numbers
+            numbers_layout.addStretch()
+            numbers_layout.insertStretch(0)
+            
+            card_layout.addWidget(numbers_widget)
+            
+            # Add the card to the results layout
+            self.results_layout.addWidget(result_card)
+        
+        # Add a spacer at the end
+        self.results_layout.addStretch()
+        
+        # Also update the table for CSV export compatibility
+        self.update_results_table(recent_results)
 
+    def update_results_table(self, recent_results):
+        """Update the hidden table for CSV export compatibility"""
+        # Create the table if it doesn't exist
+        if not hasattr(self, 'recent_results_table'):
+            self.recent_results_table = QTableWidget()
+            self.recent_results_table.setColumnCount(7)
+            self.recent_results_table.setHorizontalHeaderLabels(["Date", "1", "2", "3", "4", "5", "6"])
+        
+        # Clear previous results
+        self.recent_results_table.setRowCount(0)
+        
+        # Add the results to the table
         self.recent_results_table.setRowCount(len(recent_results))
         for i, row_data in enumerate(recent_results):
             for j, item in enumerate(row_data):
-                self.recent_results_table.setItem(i, j, QTableWidgetItem(str(item)))
+                if j < self.recent_results_table.columnCount():
+                    self.recent_results_table.setItem(i, j, QTableWidgetItem(str(item)))
 
     # --------- Functions related to populating the frequency table ---------
 
@@ -1622,13 +1841,13 @@ class LotteryBall(QMainWindow):
         """Export data to CSV"""
         file_path, _ = QFileDialog.getSaveFileName(self, "Save File", "", "CSV Files (*.csv)")
         if file_path:
-            # Collect numbers from the ball widgets
-            numbers = [ball.number for ball in self.lottery_balls]
+            # Collect numbers from the ball widgets and ensure they're clean
+            numbers = [ball.number.replace("`", "") for ball in self.lottery_balls]
             
             # Create a frequency data structure from the number_labels
             frequency_data = []
             for num, (_, freq_label) in sorted(self.number_labels.items()):
-                frequency = freq_label.text()
+                frequency = freq_label.text().replace("`", "")
                 frequency_data.append((str(num), frequency))
             
             success = export_data_to_csv(
@@ -1656,16 +1875,17 @@ class LotteryBall(QMainWindow):
 
 
 class BallWidget(QLabel):
-    def __init__(self, number, ball_index, parent=None):
+    def __init__(self, number, ball_index, parent=None, size=200, font_size=48):
         super().__init__(parent)
-        self.setFixedSize(200, 200)
+        self.setFixedSize(size, size)
         self.setAlignment(Qt.AlignCenter)
 
         self.number = number
         self.ball_index = ball_index
         self.pixmap = None
+        self.font_size = font_size
 
-        self.setStyleSheet("background-color: rgba(255, 255, 255, 0);")  # Red background for example
+        self.setStyleSheet("background-color: rgba(255, 255, 255, 0);")
 
         self.load_ball_image()
 
@@ -1699,7 +1919,7 @@ class BallWidget(QLabel):
         # Draw centered number
         custom_color = QColor(25, 25, 75, 255)  # This is a dark blue color with full opacity
         painter.setPen(custom_color)
-        painter.setFont(QFont("Roboto Condensed", 48, QFont.Weight.Black))
+        painter.setFont(QFont("Roboto Condensed", self.font_size, QFont.Weight.Black))
         painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, str(self.number))
 
 
