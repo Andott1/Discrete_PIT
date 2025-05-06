@@ -11,8 +11,8 @@ from bs4 import BeautifulSoup
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QComboBox, QDateEdit,
                              QHBoxLayout, QPushButton, QLabel, QLineEdit, QTableWidgetItem, QTableWidget, QAbstractItemView,
                              QFrame, QSizePolicy, QStackedWidget, QTextEdit, QDesktopWidget, QSpacerItem, QMessageBox, QFileDialog)
-from PyQt5.QtCore import Qt, QTimer, QPropertyAnimation, QRect, QEasingCurve, QDate, pyqtSignal, QThread
-from PyQt5.QtGui import QPalette, QColor, QFont, QFontDatabase, QBrush, QPainter, QPainterPath, QIcon, QPixmap, QCursor
+from PyQt5.QtCore import Qt, QTimer, QPropertyAnimation, QRect, QEasingCurve, QDate, pyqtSignal, QThread, QRectF
+from PyQt5.QtGui import QPalette, QColor, QFont, QFontDatabase, QBrush, QPainter, QPainterPath, QIcon, QPixmap, QCursor, QLinearGradient
 
 # Lottery configurations from config.py
 LOTTERY_CONFIG = {
@@ -440,20 +440,26 @@ asset_manager = AssetManager()
 # -----------------------------------------------
 
 class RoundedWidget(QWidget):
-    def __init__(self, parent=None, radius=20, bg_color="#FFFFFF"):
+    def __init__(self, radius=20, color1=QColor(0, 0, 0, 50), color2=None, parent=None):
         super().__init__(parent)
         self.radius = radius
-        self.bg_color = bg_color
+        self.color1 = color1
+        self.color2 = color2 or color1  # Use solid color if no gradient
+        self.setAttribute(Qt.WA_TranslucentBackground)
         
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        
+
+        rect = QRectF(self.rect())
         path = QPainterPath()
-        path.addRoundedRect(0, 0, self.width(), self.height(), self.radius, self.radius)
-        
-        painter.setClipPath(path)
-        painter.fillPath(path, QBrush(QColor(self.bg_color)))
+        path.addRoundedRect(rect, self.radius, self.radius)
+
+        gradient = QLinearGradient(0, 0, 0, rect.height())  # Vertical gradient (top to bottom)
+        gradient.setColorAt(0, self.color1)
+        gradient.setColorAt(1, self.color2)
+
+        painter.fillPath(path, gradient)
 
 
 class CircleButtonBack(QPushButton):
@@ -473,16 +479,22 @@ class CircleButtonBack(QPushButton):
 
         self.setStyleSheet("""
             QPushButton {
-                background-color: #9191DC;
+                background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 rgba(255, 210, 80, 1),
+                                stop: 1 rgba(245, 115, 35, 1));
                 border-radius: 25px;
                 color: white;
                 font-weight: bold;
             }
             QPushButton:hover {
-                background-color: #7777B2;
+                background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 rgba(255, 210, 80, .75),
+                                stop: 1 rgba(245, 115, 35, .75));
             }
             QPushButton:pressed {
-                background-color: #55557D;
+                background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 rgba(255, 210, 80, .25),
+                                stop: 1 rgba(245, 115, 35, .25));
             }
         """)
 
@@ -507,21 +519,103 @@ class CircleButtonInfo(QPushButton):
 
         self.setStyleSheet("""
             QPushButton {
-                background-color: #9191DC;
+                background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 rgba(255, 210, 80, 1),
+                                stop: 1 rgba(245, 115, 35, 1));
                 border-radius: 25px;
                 color: white;
                 font-weight: bold;
             }
             QPushButton:hover {
-                background-color: #7777B2;
+                background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 rgba(255, 210, 80, .75),
+                                stop: 1 rgba(245, 115, 35, .75));
             }
             QPushButton:pressed {
-                background-color: #55557D;
+                background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 rgba(255, 210, 80, .25),
+                                stop: 1 rgba(245, 115, 35, .25));
             }
         """)
 
         if on_info_pressed:
-            self.clicked.connect(on_info_pressed)
+                self.clicked.connect(on_info_pressed)
+
+class CircleButtonPrev(QPushButton):
+    def __init__(self, parent=None, on_prev_pressed=None):
+        super().__init__(parent)
+        self.setFixedSize(40, 40)
+
+        icon_path = asset_manager.load_asset("Assets/Icons/previous_icon.png")
+        icon = QIcon(icon_path)
+        if icon.isNull():
+            print(f"Failed to load icon: {icon_path}")
+        else:
+            self.setIcon(icon)
+
+        icon_size = self.size() * 0.4
+        self.setIconSize(icon_size)
+
+        self.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 rgba(255, 210, 80, 1),
+                                stop: 1 rgba(245, 115, 35, 1));
+                border-radius: 20px;
+                color: white;
+                font-weight: bold;
+                padding-left: 0px;  /* Move icon to the right */
+                padding-right: 4px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 rgba(255, 210, 80, .75),
+                                stop: 1 rgba(245, 115, 35, .75));
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 rgba(255, 210, 80, .25),
+                                stop: 1 rgba(245, 115, 35, .25));
+            }
+        """)
+
+class CircleButtonNext(QPushButton):
+    def __init__(self, parent=None, on_next_pressed=None):
+        super().__init__(parent)
+        self.setFixedSize(40, 40)
+
+        icon_path = asset_manager.load_asset("Assets/Icons/next_icon.png")
+        icon = QIcon(icon_path)
+        if icon.isNull():
+            print(f"Failed to load icon: {icon_path}")
+        else:
+            self.setIcon(icon)
+
+        icon_size = self.size() * 0.4
+        self.setIconSize(icon_size)
+
+        self.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 rgba(255, 210, 80, 1),
+                                stop: 1 rgba(245, 115, 35, 1));
+                border-radius: 20px;
+                color: white;
+                font-weight: bold;
+                padding-left: 4px;  /* Move icon to the right */
+                padding-right: 0px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 rgba(255, 210, 80, .75),
+                                stop: 1 rgba(245, 115, 35, .75));
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 rgba(255, 210, 80, .25),
+                                stop: 1 rgba(245, 115, 35, .25));
+            }
+        """)
 
 # -----------------------------------------------
 # Main Application
@@ -552,7 +646,7 @@ class LotteryBall(QMainWindow):
         main_layout.setContentsMargins(50, 50, 50, 50)
 
         # Outer container with rounded corners
-        outer_container = RoundedWidget(radius=30, bg_color=QColor(255, 255, 255, 250))
+        outer_container = RoundedWidget(radius=30, color1=QColor(0, 0, 0, 50))
         outer_layout = QVBoxLayout(outer_container)
         outer_layout.setContentsMargins(30, 30, 30, 30)
         outer_layout.setSpacing(25)
@@ -621,7 +715,7 @@ class LotteryBall(QMainWindow):
         
         title_label = QLabel("LET\'S PLAY LOTTO")
         title_label.setFont(QFont("Roboto Condensed", 24, QFont.ExtraBold))
-        title_label.setStyleSheet("color: #55557D;")  # Replace with your desired color
+        title_label.setStyleSheet("color: #FFFFFF;")  # Replace with your desired color
         title_label.setAlignment(Qt.AlignLeft)
         title_layout.addWidget(title_label)
         top_layout.addWidget(title_widget, 1)
@@ -645,7 +739,7 @@ class LotteryBall(QMainWindow):
 
         self.datetime_label = QLabel()
         self.datetime_label.setFont(QFont("Roboto", 14, QFont.Medium))
-        self.datetime_label.setStyleSheet("color: #55557D;")
+        self.datetime_label.setStyleSheet("color: #FFFFFF;")
         self.datetime_label.setAlignment(Qt.AlignCenter)
 
         self.datetime_timer = QTimer()
@@ -673,14 +767,16 @@ class LotteryBall(QMainWindow):
     
     def create_left_panel(self):
         left_panel = QWidget()
-        left_panel.setStyleSheet("background-color: rgba(145, 145, 220, 0.25); border-radius: 20px;")
+        left_panel.setStyleSheet("background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1," \
+                                "stop: 0 rgba(60, 85, 180, 0.25)," \
+                                "stop: 1 rgba(55, 55, 150, 0.25));; border-radius: 20px;")
         left_layout = QVBoxLayout(left_panel)
         
         left_layout.setSpacing(25)
         left_layout.setContentsMargins(15, 15, 15, 15)
 
         control_panel = self.create_control_panel()
-        control_panel.setStyleSheet("background-color: rgba(145, 145, 220, 0.9); border-radius: 20px;")
+        control_panel.setStyleSheet("background-color: rgba(145, 145, 220, 0); border-radius: 20px;")
         left_layout.addWidget(control_panel)
         left_layout.addStretch()
 
@@ -695,7 +791,7 @@ class LotteryBall(QMainWindow):
         # Lottery Game Selector
         lottery_game_label = QLabel("  Choose Lottery Game")
         lottery_game_label.setFont(QFont("Roboto", 18, QFont.Bold))
-        lottery_game_label.setStyleSheet("color: #55557D; background-color: rgba(145, 145, 220, 0)")
+        lottery_game_label.setStyleSheet("color: #FFFFFF; background-color: rgba(145, 145, 220, 0)")
         control_layout.addWidget(lottery_game_label)
         
         lottery_options = ["Lotto 6/42", "Megalotto 6/45", "Superlotto 6/49", "Grand Lotto 6/55", "Ultra Lotto 6/58"]
@@ -708,101 +804,52 @@ class LotteryBall(QMainWindow):
         # Results Date
         date_range_label = QLabel("  Set Results Date")
         date_range_label.setFont(QFont("Roboto", 18, QFont.Bold))
-        date_range_label.setStyleSheet("color: #55557D; background-color: rgba(145, 145, 220, 0)")
+        date_range_label.setStyleSheet("color: #FFFFFF; background-color: rgba(145, 145, 220, 0)")
         control_layout.addWidget(date_range_label)
+
+        icon_path = asset_manager.load_asset("Assets/Screens/splash_screen.png")
 
         # From Date
         from_layout = QHBoxLayout()
-        from_label = QLabel("From:")
-        from_label.setStyleSheet("color: white; font-size: 14px;")
+        from_label = QLabel("     From:")
+        from_label.setStyleSheet("color: #FFFFFF; font-size: 16px;")
         from_layout.addWidget(from_label)
 
-        self.from_date_edit = QDateEdit()
-        self.from_date_edit.setCalendarPopup(True)
-        self.from_date_edit.setDate(QDate.currentDate().addDays(-30))
-        self.from_date_edit.setStyleSheet("""
-            QDateEdit {
-                border-radius: 10px;
-                padding: 8px 12px;
-                background-color: rgba(145, 145, 220, 0.25);
-                font-family: 'Roboto Medium';
-                font-size: 16px;
-                color: #55557D;
-            }
-
-            QDateEdit:focus {
-                border: 2px solid #7777B2;
-                background-color: rgba(145, 145, 220, 0.15);
-            }
-
-            QDateEdit::drop-down {
-                subcontrol-origin: padding;
-                subcontrol-position: top right;
-                width: 25px;
-                border-left: 1px solid #7777B2;
-            }
-
-            QDateEdit::down-arrow {
-                width: 16px;
-                height: 16px;
-            }
-        """)
+        self.from_date_edit = self.create_date_edit_field(QDate.currentDate().addDays(-30))
         from_layout.addWidget(self.from_date_edit)
         control_layout.addLayout(from_layout)
 
         # To date
         to_layout = QHBoxLayout()
-        to_label = QLabel("To:")
-        to_label.setStyleSheet("color: white; font-size: 14px;")
+        to_label = QLabel("     To:")
+        to_label.setStyleSheet("color: #FFFFFF; font-size: 16px;")
         to_layout.addWidget(to_label)
 
-        self.to_date_edit = QDateEdit()
-        self.to_date_edit.setCalendarPopup(True)
-        self.to_date_edit.setDate(QDate.currentDate())
-        self.to_date_edit.setStyleSheet("""
-            QDateEdit {
-                border-radius: 10px;
-                padding: 8px 12px;
-                background-color: rgba(145, 145, 220, 0.25);
-                font-family: 'Roboto Medium';
-                font-size: 16px;
-                color: #55557D;
-            }
-
-            QDateEdit:focus {
-                border: 2px solid #7777B2;
-                background-color: rgba(145, 145, 220, 0.15);
-            }
-
-            QDateEdit::drop-down {
-                subcontrol-origin: padding;
-                subcontrol-position: top right;
-                width: 25px;
-                border-left: 1px solid #7777B2;
-            }
-
-            QDateEdit::down-arrow {
-                width: 16px;
-                height: 16px;
-            }
-        """)
+        self.to_date_edit = self.create_date_edit_field(QDate.currentDate())
         to_layout.addWidget(self.to_date_edit)
         control_layout.addLayout(to_layout)
 
+        control_layout.addSpacing(15)
+
         # Add button to fetch results
-        fetch_button = QPushButton("Fetch Results")
+        fetch_button = QPushButton("Get Recent Results")
         fetch_button.setStyleSheet("""
             QPushButton {
-                background-color: #7777B2;
-                color: white;
-                border-radius: 10px;
+                background-color: rgba(55, 55, 150, 0.75);
+                color: rgba(255, 255, 255, 1);
+                border-radius: 20px;
                 padding: 8px;
-                font-family: 'Roboto';
-                font-size: 14px;
+                font-family: 'Roboto Black';
+                font-size: 20px;
+                min-height: 40px;
             }
             QPushButton:hover {
-                background-color: #55557D;
+                background-color: rgba(55, 55, 150, 0.5);
             }
+            QPushButton:pressed {
+                background-color: rgba(55, 55, 150, 0.25);
+            }                       
+
         """)
         fetch_button.clicked.connect(self.check_and_fetch_results)
         control_layout.addWidget(fetch_button)
@@ -819,7 +866,7 @@ class LotteryBall(QMainWindow):
             QFrame {
                 border-radius: 2px;
                 color: #666666;          /* Line color (used for shadows) */
-                background-color: rgba(145, 145, 220, 0.25); /* Actual line color */
+                background-color: rgba(255, 255, 255, 0.25); /* Actual line color */
             }
         """)
 
@@ -865,38 +912,225 @@ class LotteryBall(QMainWindow):
         self.fetch_results_thread.results_fetched.connect(self.display_recent_results)
         self.fetch_results_thread.start()
 
-    def create_dropdown_field(self, items):  # Styled dropdown (QComboBox)
+    def create_dropdown_field(self, items):
         combo_box = QComboBox()
         combo_box.addItems(items)
+
         combo_box.setStyleSheet("""
             QComboBox {
-                border-radius: 10px;
                 padding: 10px;
-                background-color: rgba(145, 145, 220, 0.25);
-                font-family: 'Roboto Medium';
+                border: none;
+                border-radius: 10px;
+                background-color: rgba(55, 55, 150, 0.75);
+                font-family: 'Roboto SemiBold';
                 font-size: 16px;
-                color: #7777B2;
+                color: rgba(255, 255, 255, 1);
             }
 
             QComboBox QAbstractItemView {
-                background-color: white;
-                selection-background-color: #7777B2;
-                font-family: 'Roboto';
+                padding: 10px;
+                background: rgba(255, 255, 255, 0);;
+                background-color: rgba(255, 255, 255, 0.75);  /* Dropdown background */
+                selection-background-color: #19194B;
+                font-family: 'Roboto Medium';
                 font-size: 16px;
+                color: rgba(25, 25, 75, 0.75);
+                border: none;
+                outline: 0;
+                border-top-left-radius: 0px;
+                border-top-right-radius: 0px;
+                border-bottom-left-radius: 0px;
+                border-bottom-right-radius: 0px;
             }
+                                
+            QComboBox QAbstractItemView::item:selected {
+                background-color: #19194B;  /* Selected item background color */
+            }
+
+            QComboBox QAbstractItemView::item {
+                padding: 10px;
+                margin-bottom: 6px;
+                background-color: #19194B;
+            }   
 
             QComboBox::drop-down {
                 subcontrol-origin: padding;
                 subcontrol-position: top right;
                 width: 30px;
-                border-left-width: 1px;
-                border-left-color: #7777B2;
-                border-left-style: solid;
+                border: none;
+                background: transparent;
+            }
+
+            QComboBox::down-arrow {
+                image: url(Assets/Icons/down_icon.png);
+                width: 12px;   /* adjust as needed */
+                height: 12px;
+                margin-right: 10px;  /* optional spacing */
             }
         """)
+
         combo_box.setMinimumHeight(40)
         return combo_box
     
+    def create_date_edit_field(self, date: QDate) -> QDateEdit:
+        date_edit = QDateEdit()
+        date_edit.setCalendarPopup(True)
+        date_edit.setDate(date)
+        date_edit.setFixedWidth(200)  # Adjust to your preferred size
+        date_edit.setFixedHeight(40)  # Adjust to your preferred size
+        date_edit.setStyleSheet("""
+            QDateEdit {
+                border-radius: 10px;
+                padding: 8px 12px;
+                background-color: rgba(55, 55, 150, 0.75);
+                font-family: 'Roboto Medium';
+                font-size: 16px;
+                color: #FFFFFF;
+            }
+
+            QDateEdit:focus {
+                border: 2px solid #FFFFFF;
+                background-color: rgba(55, 55, 150, 0.25);
+            }
+
+            QDateEdit::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 35px;
+                border-left: 2px solid rgba(255, 255, 255, 0);
+            }
+
+            QDateEdit::down-arrow {
+                width: 12;
+                height: 12;
+                image: url("Assets/Icons/down_icon.png");
+            }
+
+            QCalendarWidget {
+                background-color: white;
+                border-radius: 10px;
+                border: none;
+            }
+
+            QCalendarWidget QWidget#qt_calendar_navigationbar {
+                background-color: #f8f8f8;
+                padding: 4px;
+            }
+
+            QCalendarWidget QToolButton {
+                background-color: transparent;
+                color: #55557D;
+                font-size: 14px;
+                font-weight: bold;
+                border-radius: 4px;
+                padding: 6px 10px;
+            }
+
+            QCalendarWidget QToolButton:hover {
+                background-color: rgba(145, 145, 220, 0.2);
+            }
+
+            QCalendarWidget QToolButton:pressed {
+                background-color: rgba(145, 145, 220, 0.3);
+            }
+
+            QCalendarWidget QToolButton::menu-indicator {
+                image: none;
+            }
+
+            QCalendarWidget QToolButton#qt_calendar_prevmonth {
+                qproperty-icon: none;
+                qproperty-text: "<";
+                font-weight: bold;
+            }
+
+            QCalendarWidget QToolButton#qt_calendar_nextmonth {
+                qproperty-icon: none;
+                qproperty-text: ">";
+                font-weight: bold;
+            }
+
+            QCalendarWidget QWidget#qt_calendar_calendarview {
+                background-color: white;
+                selection-background-color: #9191DC;
+                selection-color: white;
+                alternate-background-color: white;
+            }
+
+            QCalendarWidget QAbstractItemView:enabled {
+                background-color: white;
+                color: #333333;
+                selection-background-color: #9191DC;
+                selection-color: white;
+                font-size: 13px;
+                outline: none;
+            }
+
+            QCalendarWidget QAbstractItemView::item {
+                padding: 6px;
+                margin: 1px;
+                border-radius: 4px;
+            }
+
+            QCalendarWidget QAbstractItemView::item:selected {
+                background-color: #9191DC;
+                color: white;
+            }
+
+            QCalendarWidget QAbstractItemView::item:hover {
+                background-color: rgba(145, 145, 220, 1);
+                border: none;
+            }
+
+            QCalendarWidget QAbstractItemView::item[today="true"] {
+                background-color: rgba(145, 145, 220, 0.1);
+                color: #9191DC;
+                font-weight: bold;
+            }
+
+            QCalendarWidget QAbstractItemView::item[weekend="true"] {
+                color: #7777B2;
+            }
+
+            QCalendarWidget QHeaderView {
+                background-color: white;
+            }
+
+            QCalendarWidget QHeaderView::section {
+                background-color: #f8f8f8;
+                color: #55557D;
+                font-size: 12px;
+                font-weight: bold;
+                padding: 6px;
+                border: none;
+            }
+
+            QCalendarWidget QSpinBox {
+                background-color: white;
+                color: #55557D;
+                border: 1px solid #e0e0e0;
+                border-radius: 4px;
+                padding: 3px;
+                margin: 2px;
+            }
+
+            QCalendarWidget QMenu {
+                background-color: white;
+                border: 1px solid #e0e0e0;
+                border-radius: 4px;
+            }
+
+            QCalendarWidget QMenu::item {
+                padding: 6px 20px;
+            }
+
+            QCalendarWidget QMenu::item:selected {
+                background-color: #9191DC;
+                color: white;
+            }
+        """)
+        return date_edit
+
     def create_main_buttons_layout(self):
         buttons_layout = QHBoxLayout()
         buttons_layout.setSpacing(15)
@@ -916,7 +1150,9 @@ class LotteryBall(QMainWindow):
 
         button.setStyleSheet("""
             QPushButton {
-                background-color: #9191DC;
+                background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 rgba(255, 210, 80, 0.9),
+                                stop: 1 rgba(245, 115, 35, 0.9));
                 color: white;
                 border-radius: 20px;
                 padding: 10px;
@@ -935,29 +1171,31 @@ class LotteryBall(QMainWindow):
 
     def create_right_panel(self):
         right_panel = QWidget()
-        right_panel.setStyleSheet("background-color: rgba(145, 145, 220, 0.25); border-radius: 10px;")
+        right_panel.setStyleSheet("background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1," \
+                                "stop: 0 rgba(60, 85, 180, 0.25)," \
+                                "stop: 1 rgba(55, 55, 150, 0.25));; border-radius: 20px;")
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(15, 15, 15, 15)
+        right_layout.setSpacing(20)
 
         # Top bar with Prev | Tab Title | Next
         top_bar = QHBoxLayout()
 
-        self.prev_button = QPushButton("Previous")
-        self.next_button = QPushButton("Next")
-        for btn in (self.prev_button, self.next_button):
-            btn.setFixedHeight(30)
-            btn.setStyleSheet("background-color: #7777B2; color: white; border-radius: 6px; padding: 5px 10px;")
+        self.prev_button = CircleButtonPrev()
+        self.next_button = CircleButtonNext()
 
         self.tab_title_label = QLabel("Lucky Numbers")
         self.tab_title_label.setAlignment(Qt.AlignCenter)
         self.tab_title_label.setFont(QFont("Roboto", 16, QFont.Bold))
-        self.tab_title_label.setStyleSheet("color: #55557D;")
+        self.tab_title_label.setStyleSheet("color: #FFFFFF; background-color: rgba(255, 255, 255, 0);")
 
+        top_bar.addSpacing(20)  
         top_bar.addWidget(self.prev_button)
         top_bar.addStretch()
         top_bar.addWidget(self.tab_title_label)
         top_bar.addStretch()
         top_bar.addWidget(self.next_button)
+        top_bar.addSpacing(20)  
 
         right_layout.addLayout(top_bar)
 
@@ -983,14 +1221,16 @@ class LotteryBall(QMainWindow):
 
         # --------- Tab 1: Lucky Numbers ----------
         lucky_tab = QWidget()
+        lucky_tab = RoundedWidget(radius=20)
         lucky_layout = QVBoxLayout(lucky_tab)
+        
         lucky_layout.setSpacing(15)
 
         self.first_row_layout = QHBoxLayout()
         self.first_row_layout.setSpacing(10)
         self.first_row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         lucky_layout.addLayout(self.first_row_layout)
-
+        
         self.second_row_layout = QHBoxLayout()
         self.second_row_layout.setSpacing(10)
         self.second_row_layout.setAlignment(Qt.AlignmentFlag.AlignRight)
@@ -1012,8 +1252,8 @@ class LotteryBall(QMainWindow):
 
         lucky_label = QLabel("IS YOUR LUCKY COMBINATION!")
         lucky_label.setAlignment(Qt.AlignCenter)
-        lucky_label.setFont(QFont("Roboto", 22, QFont.Bold))
-        lucky_label.setStyleSheet("color: #333366;")
+        lucky_label.setFont(QFont("Roboto", 24, QFont.Bold))
+        lucky_label.setStyleSheet("color: #FFFFFF; background-color: rgba(255, 255, 255, 0);")
         lucky_layout.addWidget(lucky_label)
 
         self.stacked_widget.addWidget(lucky_tab)
@@ -1031,7 +1271,7 @@ class LotteryBall(QMainWindow):
         self.freq_table.setStyleSheet("""
             QTableWidget {
                 background-color: rgba(255, 255, 255, 0.1);
-                color: #333366;
+                color: #FFFFFF;
                 font-size: 14px;
                 border-radius: 10px;
             }
@@ -1063,7 +1303,7 @@ class LotteryBall(QMainWindow):
         self.recent_results_table.setStyleSheet("""
             QTableWidget {
                 background-color: rgba(255, 255, 255, 0.1);
-                color: #333366;
+                color: #FFFFFF;
                 font-size: 14px;
                 border-radius: 10px;
             }
@@ -1090,7 +1330,7 @@ class LotteryBall(QMainWindow):
         self.history_table.setStyleSheet("""
             QTableWidget {
                 background-color: rgba(255, 255, 255, 0.1);
-                color: #333366;
+                color: #FFFFFF;
                 font-size: 14px;
                 border-radius: 10px;
             }
@@ -1123,16 +1363,16 @@ class LotteryBall(QMainWindow):
                 mirror_table.setItem(mirror_row, i + 1, QTableWidgetItem(num))
 
     def show_next_tab(self):
-        if self.current_tab_index < len(self.tab_titles) - 1:
-            self.current_tab_index += 1
-            self.stacked_widget.setCurrentIndex(self.current_tab_index)
-            self.tab_title_label.setText(self.tab_titles[self.current_tab_index])
+        # Increment tab index and wrap around using modulo if necessary
+        self.current_tab_index = (self.current_tab_index + 1) % len(self.tab_titles)
+        self.stacked_widget.setCurrentIndex(self.current_tab_index)
+        self.tab_title_label.setText(self.tab_titles[self.current_tab_index])
 
     def show_previous_tab(self):
-        if self.current_tab_index > 0:
-            self.current_tab_index -= 1
-            self.stacked_widget.setCurrentIndex(self.current_tab_index)
-            self.tab_title_label.setText(self.tab_titles[self.current_tab_index])
+        # Decrement tab index and wrap around using modulo if necessary
+        self.current_tab_index = (self.current_tab_index - 1) % len(self.tab_titles)
+        self.stacked_widget.setCurrentIndex(self.current_tab_index)
+        self.tab_title_label.setText(self.tab_titles[self.current_tab_index])
 
     def update_datetime(self):  # Date time update realtime
         current_time = datetime.now().strftime("%A, %B %d, %Y - %I:%M:%S %p")
@@ -1281,6 +1521,8 @@ class BallWidget(QLabel):
         self.ball_index = ball_index
         self.pixmap = None
 
+        self.setStyleSheet("background-color: rgba(255, 255, 255, 0);")  # Red background for example
+
         self.load_ball_image()
 
     def load_ball_image(self):
@@ -1311,7 +1553,8 @@ class BallWidget(QLabel):
             painter.drawEllipse(self.rect())
 
         # Draw centered number
-        painter.setPen(Qt.GlobalColor.black)
+        custom_color = QColor(25, 25, 75, 255)  # This is a dark blue color with full opacity
+        painter.setPen(custom_color)
         painter.setFont(QFont("Roboto Condensed", 48, QFont.Weight.Black))
         painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, str(self.number))
 
@@ -1332,8 +1575,8 @@ class SplashScreen(QWidget):
         screen_width = screen_geometry.width()
         screen_height = screen_geometry.height()
 
-        window_width = int(screen_width * 0.55)
-        window_height = int(screen_height * 0.6)
+        window_width = int(screen_width * 0.65)
+        window_height = int(screen_height * 0.65)
 
         self.setFixedSize(window_width, window_height)
 
@@ -1371,20 +1614,27 @@ class SplashScreen(QWidget):
         # Button styling
         self.start_button.setStyleSheet("""
             QPushButton {
-                background-color: rgba(145, 145, 220, 0.5);
+                background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 rgba(255, 210, 80, 1),
+                                stop: 1 rgba(245, 115, 35, 1));
                 color: #FFFFFF;
-                border-radius: 20px;
+                border-radius: 25;
                 padding: 10px;
                 font-family: 'Roboto ExtraBold';
-                font-size: 20px;
-                min-height: 40px;
+                font-size: 24px;
+                min-height: 60px;
             }
             QPushButton:hover {
-                background-color: rgba(145, 145, 220, 0.75);
-                color: #55557D;
+                background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 rgba(255, 210, 80, 0.75),
+                                stop: 1 rgba(245, 115, 35, 0.75));
+                color: rgba(255, 255, 255, 0.75);
             }
             QPushButton:pressed {
-                background-color: #7777B2;
+                background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 rgba(255, 210, 80, 0.25),
+                                stop: 1 rgba(245, 115, 35, 0.25));
+                color: rgba(255, 255, 255, 0.25);
             }
         """)
 
