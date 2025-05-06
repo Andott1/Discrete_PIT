@@ -1,5 +1,6 @@
 from itertools import combinations
 import random
+import Assets_rc
 from datetime import datetime
 from collections import Counter
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QComboBox, QDateEdit, QScrollArea, QGridLayout,
@@ -315,10 +316,20 @@ class LotteryBall(QMainWindow):
         self.fetch_results_thread = FetchResultsThread(lottery_type, self.lucky_numbers, from_date, to_date)
         self.fetch_results_thread.results_fetched.connect(self.display_recent_results)
         self.fetch_results_thread.start()
+    
+    def update_lucky_label(self):
+        # Check if any of the balls still have the default "00" number
+        if any(ball.get_number() == "00" for ball in self.lottery_balls):
+            self.lucky_label.setText("")  # Set to blank if any ball has the default number
+        else:
+            self.lucky_label.setText("IS YOUR LUCKY COMBINATION!")  # Set text when numbers are updated
 
     def create_dropdown_field(self, items):
         combo_box = QComboBox()
         combo_box.addItems(items)
+
+        # Get the down arrow icon path through the asset manager
+        down_arrow_path = self.asset_manager.load_asset("Assets/Icons/down_icon.png")
 
         combo_box.setStyleSheet("""
             QComboBox {
@@ -366,10 +377,10 @@ class LotteryBall(QMainWindow):
             }
 
             QComboBox::down-arrow {
-                image: url(Assets/Icons/down_icon.png);
-                width: 12px;   /* adjust as needed */
+                image: url(:/Assets/Icons/down_icon.png);
+                width: 12px;
                 height: 12px;
-                margin-right: 10px;  /* optional spacing */
+                margin-right: 10px;
             }
         """)
 
@@ -382,6 +393,10 @@ class LotteryBall(QMainWindow):
         date_edit.setDate(date)
         date_edit.setFixedWidth(200)  # Adjust to your preferred size
         date_edit.setFixedHeight(40)  # Adjust to your preferred size
+
+        # Get the down arrow icon path through the asset manager
+        down_arrow_path = self.asset_manager.load_asset("Assets/Icons/down_icon.png")
+
         date_edit.setStyleSheet("""
             QDateEdit {
                 border-radius: 10px;
@@ -407,7 +422,7 @@ class LotteryBall(QMainWindow):
             QDateEdit::down-arrow {
                 width: 12;
                 height: 12;
-                image: url("Assets/Icons/down_icon.png");
+                image: url(:/Assets/Icons/down_icon.png);
             }
 
             QCalendarWidget {
@@ -645,7 +660,7 @@ class LotteryBall(QMainWindow):
         self.lottery_balls = []
         ball_indices = list(range(1, 7))  # Initially from 1 to 6
         random.shuffle(ball_indices)
-        default_numbers = ["01", "02", "03", "04", "05", "06"]  # placeholder values
+        default_numbers = ["00", "00", "00", "00", "00", "00"]  # placeholder values
 
         for i in range(6):
             ball = BallWidget(default_numbers[i], ball_indices[i], asset_manager=self.asset_manager)
@@ -655,11 +670,17 @@ class LotteryBall(QMainWindow):
             else:
                 self.second_row_layout.addWidget(ball)
 
-        lucky_label = QLabel("IS YOUR LUCKY COMBINATION!")
-        lucky_label.setAlignment(Qt.AlignCenter)
-        lucky_label.setFont(QFont("Roboto", 24, QFont.Bold))
-        lucky_label.setStyleSheet("color: #FFFFFF; background-color: rgba(255, 255, 255, 0);")
-        lucky_layout.addWidget(lucky_label)
+        self.lucky_label = QLabel("IS YOUR LUCKY COMBINATION!")
+        self.lucky_label.setAlignment(Qt.AlignCenter)
+        self.lucky_label.setFont(QFont("Roboto", 24, QFont.Bold))
+        self.lucky_label.setStyleSheet("color: #FFFFFF; background-color: rgba(255, 255, 255, 0);")
+        lucky_layout.addWidget(self.lucky_label)
+
+        # Call the update function after initializing the balls
+        self.update_lucky_label()
+
+        # Add the label to the layout
+        lucky_layout.addWidget(self.lucky_label)
 
         self.stacked_widget.addWidget(lucky_tab)
 
@@ -1214,6 +1235,8 @@ class LotteryBall(QMainWindow):
         if lottery_type != self.selected_lottery_type:
             self.selected_lottery_type = lottery_type
             self.update_frequency_grid()
+
+        self.update_lucky_label()
 
         # Update the frequency display with the number counter
         self.update_frequency_display(number_counter)

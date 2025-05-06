@@ -18,6 +18,9 @@ class BallWidget(QLabel):
 
         self.load_ball_image()
 
+    def get_number(self):
+        return self.number  # Return the current number of the ball
+
     def load_ball_image(self):
         image_path = f"Assets/Icons/lottery_ball_{self.ball_index}.png"
         self.pixmap = self.asset_manager.load_pixmap(image_path)
@@ -50,3 +53,5 @@ class BallWidget(QLabel):
         painter.setPen(custom_color)
         painter.setFont(QFont("Roboto Condensed", self.font_size, QFont.Weight.Black))
         painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, str(self.number))
+
+    
