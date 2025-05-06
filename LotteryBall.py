@@ -851,10 +851,10 @@ class LotteryBall(QMainWindow):
         card_layout.setSpacing(10)
         
         # Lottery type
-        type_label = QLabel(f"Lottery Type: {lottery_type}")
+        type_label = QLabel(f"Lottery Game: {lottery_type}")
         type_label.setFont(QFont("Roboto", 16, QFont.Bold))
         type_label.setStyleSheet("color: white; background: rgba(255, 255, 255, 0)")
-        type_label.setAlignment(Qt.AlignCenter)
+        type_label.setAlignment(Qt.AlignLeft)
         card_layout.addWidget(type_label)
         
         # Numbers container
@@ -1007,7 +1007,7 @@ class LotteryBall(QMainWindow):
             date_label = QLabel(f"Draw Date: {draw_date}")
             date_label.setFont(QFont("Roboto", 16, QFont.Bold))
             date_label.setStyleSheet("color: white; background: rgba(255, 255, 255, 0);")
-            date_label.setAlignment(Qt.AlignCenter)
+            date_label.setAlignment(Qt.AlignLeft)
             card_layout.addWidget(date_label)
             
             # Numbers container
@@ -1228,27 +1228,45 @@ class LotteryBall(QMainWindow):
         """Export data to CSV"""
         file_path, _ = QFileDialog.getSaveFileName(self, "Save File", "", "CSV Files (*.csv)")
         if file_path:
-            # Collect numbers from the ball widgets and ensure they're clean
-            numbers = [ball.number.replace("`", "") for ball in self.lottery_balls]
-            
-            # Create a frequency data structure from the number_labels
-            frequency_data = []
-            for num, (_, freq_label) in sorted(self.number_labels.items()):
-                frequency = freq_label.text().replace("`", "")
-                frequency_data.append((str(num), frequency))
-            
-            success = export_data_to_csv(
-                file_path,
-                f"Lucky Numbers: {'-'.join(numbers)}",
-                frequency_data,  # Pass the frequency data instead of freq_table
-                None,  # No combinations table in new UI (set to None)
-                self.recent_results_table,
-                self.history_table  # Internal QTableWidget used for history
-            )
+            try:
+                # Collect numbers from the ball widgets and ensure they're clean
+                numbers = [ball.number.replace("`", "") for ball in self.lottery_balls]
+                
+                # Create a frequency data structure from the number_labels
+                frequency_data = []
+                for num, (_, freq_label) in sorted(self.number_labels.items()):
+                    frequency = freq_label.text().replace("`", "")
+                    frequency_data.append((str(num), frequency))
+                
+                # Check if recent_results_table exists, if not create an empty one
+                if not hasattr(self, 'recent_results_table'):
+                    self.recent_results_table = QTableWidget()
+                    self.recent_results_table.setColumnCount(7)
+                    self.recent_results_table.setHorizontalHeaderLabels(["Date", "1", "2", "3", "4", "5", "6"])
+                
+                # Check if history_table exists, if not create an empty one
+                if not hasattr(self, 'history_table'):
+                    self.history_table = QTableWidget()
+                    self.history_table.setColumnCount(7)
+                    self.history_table.setHorizontalHeaderLabels(["Lotto Type", "1", "2", "3", "4", "5", "6"])
+                
+                success = export_data_to_csv(
+                    file_path,
+                    f"Lucky Numbers: {'-'.join(numbers)}",
+                    frequency_data,  # Pass the frequency data instead of freq_table
+                    None,  # No combinations table in new UI (set to None)
+                    self.recent_results_table,
+                    self.history_table  # Internal QTableWidget used for history
+                )
 
-            if success:
-                QMessageBox.information(self, "Success", "Data exported successfully!")
-            return success
+                if success:
+                    QMessageBox.information(self, "Success", "Data exported successfully!")
+                return success
+            except Exception as e:
+                # Show error message with details
+                QMessageBox.warning(self, "Error Saving Data", 
+                                f"An error occurred while saving data:\n{str(e)}")
+                return False
         return False
 
     # Warning popup box for errors

@@ -1,7 +1,5 @@
 import csv
 
-
-
 def export_data_to_csv(file_path, lucky_numbers, frequency_data, combinations_table, recent_results_table, history_table):
     """Export all data to a CSV file"""
     with open(file_path, "w", newline="") as file:
@@ -30,31 +28,45 @@ def export_data_to_csv(file_path, lucky_numbers, frequency_data, combinations_ta
         
         writer.writerow([])
 
-        if combinations_table:
+        if combinations_table and hasattr(combinations_table, 'rowCount') and combinations_table.rowCount() > 0:
             writer.writerow(["Random 1000 Combinations:"])
             writer.writerow(["Combination #", "Num1", "Num2", "Num3", "Num4", "Num5", "Num6"])
             for row in range(combinations_table.rowCount()):
-                writer.writerow([
-                    combinations_table.item(row, col).text()
-                    for col in range(combinations_table.columnCount())
-                ])
+                row_data = []
+                for col in range(combinations_table.columnCount()):
+                    item = combinations_table.item(row, col)
+                    row_data.append(item.text() if item else "")
+                writer.writerow(row_data)
             writer.writerow([])
         
         writer.writerow(["Recent Results:"])
         writer.writerow(["Draw", "1", "2", "3", "4", "5", "6"])
-        for row in range(recent_results_table.rowCount()):
-            writer.writerow([
-                recent_results_table.item(row, col).text()
-                for col in range(recent_results_table.columnCount())
-            ])
+        
+        if recent_results_table and hasattr(recent_results_table, 'rowCount') and recent_results_table.rowCount() > 0:
+            for row in range(recent_results_table.rowCount()):
+                row_data = []
+                for col in range(recent_results_table.columnCount()):
+                    item = recent_results_table.item(row, col)
+                    row_data.append(item.text() if item else "")
+                writer.writerow(row_data)
+        else:
+            # Write an empty row if no results are available
+            writer.writerow(["No recent results available", "", "", "", "", "", ""])
+        
         writer.writerow([])
 
         writer.writerow(["Lucky Numbers History:"])
         writer.writerow(["Lotto Type", "1", "2", "3", "4", "5", "6"])
-        for row in range(history_table.rowCount()):
-            writer.writerow([
-                history_table.item(row, col).text()
-                for col in range(history_table.columnCount())
-            ])
+        
+        if history_table and hasattr(history_table, 'rowCount') and history_table.rowCount() > 0:
+            for row in range(history_table.rowCount()):
+                row_data = []
+                for col in range(history_table.columnCount()):
+                    item = history_table.item(row, col)
+                    row_data.append(item.text() if item else "")
+                writer.writerow(row_data)
+        else:
+            # Write an empty row if no history is available
+            writer.writerow(["No history available", "", "", "", "", "", ""])
             
     return True
