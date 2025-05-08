@@ -128,10 +128,10 @@ lottery-number-generator/
 ## Usage
 
 1. **Select Lottery Type**: Choose from different lottery types (Ultra Lotto 6/58, Grand Lotto 6/55, etc.)
-2. **Set Date Range**: Select the date range for fetching lottery results
-3. **Generate Lucky Numbers**: Click the "Generate Lucky Numbers" button to generate lucky numbers
-4. **View Results**: View the generated numbers, recent results, and frequency analysis
-5. **Export Data**: Export the data to a CSV file for further analysis
+1. **Set Date Range**: Select the date range for fetching lottery results
+1. **Generate Lucky Numbers**: Click the "Generate Lucky Numbers" button to generate lucky numbers
+1. **View Results**: View the generated numbers, recent results, and frequency analysis
+1. **Export Data**: Export the data to a CSV file for further analysis
 
 ## Lottery Types Supported
 

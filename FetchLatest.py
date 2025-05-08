@@ -99,7 +99,7 @@ def fetch_latest_winning_numbers(lottery_type, from_date, to_date):
                 if winning_numbers:
                     results.append((draw_date, winning_numbers))
 
-                if len(results) >= 15:
+                if len(results) >= 500:
                     break
 
     except requests.RequestException as e:

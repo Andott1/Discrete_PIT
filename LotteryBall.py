@@ -212,8 +212,6 @@ class LotteryBall(QMainWindow):
         date_range_label.setStyleSheet("color: #FFFFFF; background-color: rgba(145, 145, 220, 0)")
         control_layout.addWidget(date_range_label)
 
-        icon_path = self.asset_manager.load_asset("Assets/Screens/splash_screen.png")
-
         # From Date
         from_layout = QHBoxLayout()
         from_label = QLabel("     From:")
@@ -313,8 +311,13 @@ class LotteryBall(QMainWindow):
 
     def start_fetch_results_thread(self, lottery_type, from_date, to_date):
         """Start the thread to fetch lottery results"""
+        self.generate_button.setEnabled(False)
+        self.generate_button.setText("FETCHING...")
+
         self.fetch_results_thread = FetchResultsThread(lottery_type, self.lucky_numbers, from_date, to_date)
         self.fetch_results_thread.results_fetched.connect(self.display_recent_results)
+        self.fetch_results_thread.finished.connect(lambda: self.generate_button.setEnabled(True))
+        self.fetch_results_thread.finished.connect(lambda: self.generate_button.setText("GENERATE"))
         self.fetch_results_thread.start()
     
     def update_lucky_label(self):
@@ -555,7 +558,7 @@ class LotteryBall(QMainWindow):
         buttons_layout.setSpacing(15)
 
         self.generate_button = self.create_main_buttons("GENERATE")
-        self.generate_button.clicked.connect(self.generate_lucky_numbers)     #Connect to Generate Function
+        self.generate_button.clicked.connect(self.on_generate_clicked)     #Connect to Generate Function
         save_button = self.create_main_buttons("Save Data")
         save_button.clicked.connect(self.save_data)         #Connect to Save Data to CSV
         
@@ -984,7 +987,7 @@ class LotteryBall(QMainWindow):
         self.update_background()
         super().resizeEvent(event)
         
-    def display_recent_results(self, recent_results):
+    def display_recent_results(self, recent_results, number_counter):
         """Display recent lottery results in a card-based layout with BallWidget"""
         # Clear previous results
         while self.results_layout.count():
@@ -1084,13 +1087,6 @@ class LotteryBall(QMainWindow):
                     self.recent_results_table.setItem(i, j, QTableWidgetItem(str(item)))
 
     # --------- Functions related to populating the frequency table ---------
-
-    def populate_table(self, table, number_counter):
-        """Populate the frequency table with data"""
-        table.setRowCount(len(number_counter))
-        for i, (num, freq) in enumerate(number_counter.most_common()):
-            table.setItem(i, 0, QTableWidgetItem(str(num)))
-            table.setItem(i, 1, QTableWidgetItem(str(freq)))
 
     def update_frequency_display(self, number_counter):
         """Update the frequency display with the number frequencies."""
@@ -1200,53 +1196,44 @@ class LotteryBall(QMainWindow):
             self.number_labels[num] = (box, freq_label)
 
     # Connected to GENERATE Button
-    def generate_lucky_numbers(self):
-        # Disable the generate button while processing
-        self.generate_button.setEnabled(False)
-        self.generate_button.setText("GENERATING...")
-
-        # Get selected lottery type
-        lottery_type = self.lottery_dropdown.currentText()
-        min_num, max_num = LOTTERY_CONFIG[lottery_type]
-
-        # Generate all valid combinations
-        all_combinations = list(combinations(range(min_num, max_num + 1), 6))
-
-        # Randomly select 1000 unique combinations
-        sampled_combinations = random.sample(all_combinations, 1000)
-
-        # Count frequency of each number in the 1000 combinations
-        number_counter = Counter(num for comb in sampled_combinations for num in comb)
+    def on_results_fetched(self, table_data, number_counter):
+        # Display results in UI
+        self.display_recent_results(table_data, number_counter)
 
         # Pick top 6 most frequent numbers
         top_6 = [str(num).zfill(2) for num, _ in number_counter.most_common(6)]
-        
-        # Store the lucky numbers
         self.lucky_numbers = top_6
 
-        # Shuffle image indices for visual randomness (1–6)
+        # Shuffle ball indices for visual variation
         ball_indices = list(range(1, 7))
         random.shuffle(ball_indices)
 
-        # Update the 6 BallWidgets
+        # Update BallWidgets with lucky numbers
         for i, (widget, num_str) in enumerate(zip(self.lottery_balls, top_6)):
             widget.update_number(num_str, ball_indices[i])
 
-        # Make sure the frequency grid is updated for the current lottery type
-        if lottery_type != self.selected_lottery_type:
-            self.selected_lottery_type = lottery_type
-            self.update_frequency_grid()
-
         self.update_lucky_label()
-
-        # Update the frequency display with the number counter
         self.update_frequency_display(number_counter)
-        self.add_history(self.history_table, lottery_type, top_6)
+        self.add_history(self.history_table, self.selected_lottery_type, top_6)
 
         # Re-enable the button
         self.generate_button.setEnabled(True)
         self.generate_button.setText("GENERATE")
     
+    def on_generate_clicked(self):
+        from_date = self.from_date_edit.date().toString("MM/dd/yyyy")
+        to_date = self.to_date_edit.date().toString("MM/dd/yyyy")
+
+        if self.from_date_edit.date() <= self.to_date_edit.date():
+            # Disable the button while fetching
+            self.generate_button.setEnabled(False)
+            self.generate_button.setText("FETCHING...")
+            
+            # Start the fetch thread to get results and generate lucky numbers
+            self.start_fetch_results_thread(self.lottery_dropdown.currentText(), from_date, to_date)
+        else:
+            QMessageBox.warning(self, "Invalid Date Range", "From date must not be later than To date.")
+
     # Connected to Save Data Button
     def save_data(self):
         """Export data to CSV"""
