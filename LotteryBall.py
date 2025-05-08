@@ -5,7 +5,7 @@ from datetime import datetime
 from collections import Counter
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QComboBox, QDateEdit, QScrollArea, QGridLayout,
                              QHBoxLayout, QPushButton, QLabel, QTableWidgetItem, QTableWidget,
-                             QFrame, QStackedWidget, QDesktopWidget, QMessageBox, QFileDialog)
+                             QFrame, QStackedWidget, QDesktopWidget, QMessageBox, QFileDialog, QLineEdit)
 from PyQt5.QtCore import Qt, QTimer, QDate
 from PyQt5.QtGui import QPalette, QColor, QFont, QBrush, QIcon, QPixmap
 
@@ -234,6 +234,18 @@ class LotteryBall(QMainWindow):
 
         control_layout.addSpacing(15)
 
+        # Display limit input
+        display_limit_layout = QHBoxLayout()
+        display_limit_label = QLabel("Display Limit:")
+        display_limit_label.setStyleSheet("color: #FFFFFF; font-size: 16px;")
+        display_limit_layout.addWidget(display_limit_label)
+
+        self.display_limit_edit = self.create_line_edit_field("15")  # Default value
+        display_limit_layout.addWidget(self.display_limit_edit)
+        control_layout.addLayout(display_limit_layout)
+
+        control_layout.addSpacing(15)
+
         # Add button to fetch results
         fetch_button = QPushButton("Get Recent Results")
         fetch_button.setStyleSheet("""
@@ -279,13 +291,53 @@ class LotteryBall(QMainWindow):
 
         control_layout.addSpacing(10)
 
+        # Fetch limit input
+        fetch_limit_layout = QHBoxLayout()
+        fetch_limit_label = QLabel("Fetch Limit:")
+        fetch_limit_label.setStyleSheet("color: #FFFFFF; font-size: 16px;")
+        fetch_limit_layout.addWidget(fetch_limit_label)
+
+        self.fetch_limit_edit = self.create_line_edit_field("15")  # Default value
+        fetch_limit_layout.addWidget(self.fetch_limit_edit)
+        control_layout.addLayout(fetch_limit_layout)
+
+        control_layout.addSpacing(10)
+
         # Buttons
         buttons_layout = self.create_main_buttons_layout()
         control_layout.addLayout(buttons_layout)
-        
-        control_layout.addSpacing(10)
+
+        buttons_layout.addSpacing(15)
 
         return control_panel
+
+    def create_line_edit_field(self, default_text):
+        """Create a styled line edit field for numeric input"""
+        line_edit = QLineEdit(default_text)
+        line_edit.setFixedWidth(200)
+        line_edit.setFixedHeight(40)
+        
+        # Set validator to only allow integers
+        from PyQt5.QtGui import QIntValidator
+        line_edit.setValidator(QIntValidator(1, 10000))
+        
+        line_edit.setStyleSheet("""
+            QLineEdit {
+                border-radius: 10px;
+                padding: 8px 12px;
+                background-color: rgba(55, 55, 150, 0.75);
+                font-family: 'Roboto Medium';
+                font-size: 16px;
+                color: #FFFFFF;
+            }
+
+            QLineEdit:focus {
+                border: 2px solid #FFFFFF;
+                background-color: rgba(55, 55, 150, 0.25);
+            }
+        """)
+        
+        return line_edit
 
     def on_lottery_selection_changed(self):
         """Triggered when the lottery type selection changes"""
@@ -303,18 +355,26 @@ class LotteryBall(QMainWindow):
             from_date_str = from_date.toString("MM/dd/yyyy")
             to_date_str = to_date.toString("MM/dd/yyyy")
             
+                # Get the fetch limit and display limit from the line edits
+            try:
+                fetch_limit = int(self.fetch_limit_edit.text())
+                display_limit = int(self.display_limit_edit.text())
+                if fetch_limit <= 0:
+                    fetch_limit = 15  # Default if invalid
+                if display_limit <= 0:
+                    display_limit = 15  # Default if invalid
+            except ValueError:
+                fetch_limit = 15  # Default if conversion fails
+                display_limit = 15  # Default if conversion fails
             # Start the fetch thread to get recent results
-            self.start_fetch_results_thread(self.selected_lottery_type, from_date_str, to_date_str)
+            self.start_fetch_results_thread(self.selected_lottery_type, from_date_str, to_date_str, fetch_limit, display_limit)
         else:
             # Display a warning if the date range is invalid
             QMessageBox.warning(self, "Invalid Date Range", "From date must not be later than To date.")
 
-    def start_fetch_results_thread(self, lottery_type, from_date, to_date):
+    def start_fetch_results_thread(self, lottery_type, from_date, to_date, fetch_limit, display_limit):
         """Start the thread to fetch lottery results"""
-        self.generate_button.setEnabled(False)
-        self.generate_button.setText("FETCHING...")
-
-        self.fetch_results_thread = FetchResultsThread(lottery_type, self.lucky_numbers, from_date, to_date)
+        self.fetch_results_thread = FetchResultsThread(lottery_type, self.lucky_numbers, from_date, to_date, fetch_limit, display_limit)
         self.fetch_results_thread.results_fetched.connect(self.display_recent_results)
         self.fetch_results_thread.finished.connect(lambda: self.generate_button.setEnabled(True))
         self.fetch_results_thread.finished.connect(lambda: self.generate_button.setText("GENERATE"))
@@ -561,6 +621,8 @@ class LotteryBall(QMainWindow):
         self.generate_button.clicked.connect(self.on_generate_clicked)     #Connect to Generate Function
         save_button = self.create_main_buttons("Save Data")
         save_button.clicked.connect(self.save_data)         #Connect to Save Data to CSV
+        
+        buttons_layout.addSpacing(15)
         
         buttons_layout.addWidget(self.generate_button)
         buttons_layout.addWidget(save_button)
@@ -1124,7 +1186,7 @@ class LotteryBall(QMainWindow):
                         }
                     """)
 
-    def on_lottery_selection_changed(self):
+    def on_lottery_selection_changed(self, fetch_limit):
         """Triggered when the lottery type selection changes"""
         self.selected_lottery_type = self.lottery_dropdown.currentText()
         
@@ -1132,7 +1194,7 @@ class LotteryBall(QMainWindow):
         self.update_frequency_grid()
         
         # Check and fetch results for the new lottery type
-        self.check_and_fetch_results()
+        self.check_and_fetch_results(fetch_limit)
 
     def update_frequency_grid(self):
         """Update the frequency grid based on the current lottery type"""
@@ -1196,26 +1258,114 @@ class LotteryBall(QMainWindow):
             self.number_labels[num] = (box, freq_label)
 
     # Connected to GENERATE Button
-    def on_results_fetched(self, table_data, number_counter):
-        # Display results in UI
-        self.display_recent_results(table_data, number_counter)
+    def generate_lucky_numbers(self):
+        # Disable the generate button while processing
+        self.generate_button.setEnabled(False)
+        self.generate_button.setText("GENERATING...")
 
-        # Pick top 6 most frequent numbers
+        # Get selected lottery type
+        lottery_type = self.lottery_dropdown.currentText()
+        
+        # Check if we have fetched results
+        if not hasattr(self, 'recent_results_table') or self.recent_results_table.rowCount() == 0:
+            # No results available, fetch them first
+            from_date = self.from_date_edit.date().toString("MM/dd/yyyy")
+            to_date = self.to_date_edit.date().toString("MM/dd/yyyy")
+            
+            # Show a message to the user
+            QMessageBox.information(
+                self,
+                "Fetching Results",
+                "No lottery results available. Fetching results first..."
+            )
+
+            # Get the fetch limit from the line edit
+            try:
+                fetch_limit = int(self.fetch_limit_edit.text())
+                display_limit = int(self.display_limit_edit.text())
+                if fetch_limit <= 0:
+                    fetch_limit = 15
+                if display_limit <= 0:
+                    display_limit = 15
+            except ValueError:
+                fetch_limit = 15
+                display_limit = 15
+            
+            # Start the fetch thread to get recent results
+            self.start_fetch_results_thread(lottery_type, from_date, to_date, fetch_limit, display_limit)
+            
+            # Connect a one-time signal to continue processing after fetch completes
+            self.fetch_results_thread.results_fetched.connect(
+                lambda results: self.continue_generate_lucky_numbers(results, lottery_type)
+            )
+        else:
+            # We already have results, extract them from the table
+            results = []
+            for row in range(self.recent_results_table.rowCount()):
+                row_data = []
+                for col in range(self.recent_results_table.columnCount()):
+                    item = self.recent_results_table.item(row, col)
+                    row_data.append(item.text() if item else "")
+                results.append(row_data)
+            
+            self.continue_generate_lucky_numbers(results, lottery_type)
+
+    def continue_generate_lucky_numbers(self, results, lottery_type):
+        # If no results were fetched, show a message and re-enable the button
+        if not results:
+            QMessageBox.warning(
+                self,
+                "No Results",
+                "No lottery results available for the selected date range. Please try a different date range."
+            )
+            self.generate_button.setEnabled(True)
+            self.generate_button.setText("GENERATE")
+            return
+        
+        # Count frequency of each number in the fetched results
+        number_counter = Counter()
+        
+        for result in results:
+            # Skip the first column (date) and collect all numbers
+            for i in range(1, min(7, len(result))):
+                num_str = result[i]
+                if num_str and num_str.isdigit():
+                    number_counter[int(num_str)] += 1
+        
+        # If we don't have enough numbers, show a message
+        if len(number_counter) < 6:
+            QMessageBox.warning(
+                self,
+                "Insufficient Data",
+                "Not enough unique numbers in the fetched results. Please try a different date range."
+            )
+            self.generate_button.setEnabled(True)
+            self.generate_button.setText("GENERATE")
+            return
+        
+        # Get top 6 most frequent numbers
         top_6 = [str(num).zfill(2) for num, _ in number_counter.most_common(6)]
         self.lucky_numbers = top_6
-
-        # Shuffle ball indices for visual variation
+        
+        # Shuffle image indices for visual randomness (1–6)
         ball_indices = list(range(1, 7))
         random.shuffle(ball_indices)
-
-        # Update BallWidgets with lucky numbers
+        
+        # Update the 6 BallWidgets
         for i, (widget, num_str) in enumerate(zip(self.lottery_balls, top_6)):
             widget.update_number(num_str, ball_indices[i])
-
+        
+        # Make sure the frequency grid is updated for the current lottery type
+        if lottery_type != self.selected_lottery_type:
+            self.selected_lottery_type = lottery_type
+            self.update_frequency_grid()
+        
         self.update_lucky_label()
+        
+        # Update the frequency display with the number counter
         self.update_frequency_display(number_counter)
-        self.add_history(self.history_table, self.selected_lottery_type, top_6)
-
+        self.add_history(self.history_table, lottery_type, top_6)
+        
         # Re-enable the button
         self.generate_button.setEnabled(True)
         self.generate_button.setText("GENERATE")

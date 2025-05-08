@@ -25,7 +25,7 @@ LOTTERY_TYPE_MAP = {
     "Lotto 6/42": "13",
 }
 
-def fetch_latest_winning_numbers(lottery_type, from_date, to_date):
+def fetch_latest_winning_numbers(lottery_type, from_date, to_date, fetch_limit):
     base_url = "https://www.pcso.gov.ph/SearchLottoResult.aspx"
 
     start_month, start_day, start_year = from_date.split('/')
@@ -99,7 +99,7 @@ def fetch_latest_winning_numbers(lottery_type, from_date, to_date):
                 if winning_numbers:
                     results.append((draw_date, winning_numbers))
 
-                if len(results) >= 500:
+                if len(results) >= fetch_limit:
                     break
 
     except requests.RequestException as e:
