@@ -1,28 +1,27 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 import os
+import sys
 import glob
 from PyInstaller.utils.hooks import collect_data_files
+from PyInstaller.building.build_main import BUNDLE
 
 block_cipher = None
 
 # Function to collect all assets correctly
 def collect_all_assets():
     assets = []
-    asset_base = 'Assets'  # Base directory for assets
+    asset_base = 'Assets'
     
-    # Check if the Assets directory exists
     if not os.path.exists(asset_base):
         print(f"WARNING: Assets directory not found at {os.path.abspath(asset_base)}")
         return []
-    
-    # Add the .qrc file itself (if it exists)
+
     qrc_file = 'Assets.qrc'
     if os.path.exists(qrc_file):
         print(f"Adding .qrc file: {qrc_file}")
         assets.append((qrc_file, 'resources.qrc'))
 
-    # Define the folders to include
     asset_folders = [
         'App Screenshots',
         'Fonts',
@@ -30,19 +29,14 @@ def collect_all_assets():
         'Screens',
     ]
     
-    # Process each folder
     for folder in asset_folders:
         folder_path = os.path.join(asset_base, folder)
         if os.path.exists(folder_path):
             print(f"Processing folder: {folder_path}")
-            # Walk through all files in this folder
             for root, _, files in os.walk(folder_path):
                 for file in files:
-                    # Get the full path to the file
                     file_path = os.path.join(root, file)
-                    # Get the destination path - preserve the folder structure
                     dest_path = os.path.join('Assets', os.path.relpath(file_path, asset_base))
-                    # Add to the assets list
                     assets.append((file_path, dest_path))
                     print(f"Adding asset: {file_path} -> {dest_path}")
         else:
@@ -51,14 +45,14 @@ def collect_all_assets():
     print(f"Total assets collected: {len(assets)}")
     return assets
 
-# Collect all assets
+# Shared
 datas = collect_all_assets()
 
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=datas,  # Add collected assets
+    datas=datas,
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -72,25 +66,65 @@ a = Analysis(
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
-exe = EXE(
-    pyz,
-    a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    [],
-    name='Let\'s Play Lotto v1.0.0 – Portable',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
-    console=False,  # Set to False for a windowed application
-    icon='Assets/Icons/app_icon.ico',
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-)
+# Platform-specific builds
+if sys.platform == 'win32':
+    exe = EXE(
+        pyz,
+        a.scripts,
+        a.binaries,
+        a.zipfiles,
+        a.datas,
+        [],
+        name="Let's Play Lotto v1.0.0b – Portable",
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        upx=True,
+        upx_exclude=[],
+        runtime_tmpdir=None,
+        console=False,
+        icon='Assets/Icons/app_icon.ico',
+    )
+    coll = COLLECT(
+        exe,
+        a.binaries,
+        a.zipfiles,
+        a.datas,
+        strip=False,
+        upx=True,
+        upx_exclude=[],
+        name="LetsPlayLotto"
+    )
+
+elif sys.platform == 'darwin':
+    mac_exe = EXE(
+        pyz,
+        a.scripts,
+        [],
+        exclude_binaries=True,
+        name="LetsPlayLotto",
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        upx=True,
+        console=False,
+        icon='Assets/Icons/app_icon.icns',  # You should provide a .icns for macOS
+    )
+
+    app = BUNDLE(
+        mac_exe,
+        name='LetsPlayLotto.app',
+        icon='Assets/Icons/app_icon.icns',
+        bundle_identifier='com.yourdomain.lotto',
+    )
+
+    coll = COLLECT(
+        app,
+        a.binaries,
+        a.zipfiles,
+        a.datas,
+        strip=False,
+        upx=True,
+        upx_exclude=[],
+        name='LetsPlayLotto'
+    )

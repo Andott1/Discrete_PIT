@@ -1,0 +1,63 @@
+name: Build Application
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags like v1.0
+
+jobs:
+  # Job for Windows
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build Windows .exe with PyInstaller
+        run: |
+          pyinstaller main.spec  # Builds .exe for Windows
+
+      - name: Upload Windows .exe
+        uses: actions/upload-artifact@v3
+        with:
+          name: Windows-App
+          path: dist/Let\'s\ Play\ Lotto\ v1.0.0b\ –\ Portable.exe
+
+  # Job for macOS
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build macOS .app with PyInstaller
+        run: |
+          pyinstaller main.spec  # Builds .app for macOS
+
+      - name: Upload macOS .app
+        uses: actions/upload-artifact@v3
+        with:
+          name: macOS-App
+          path: dist/LetsPlayLotto.app

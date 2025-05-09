@@ -1191,6 +1191,9 @@ class LotteryBall(QMainWindow):
             label.setAlignment(Qt.AlignCenter)
             pixmap = QPixmap(image_path)
 
+            # Load the image using asset manager
+            pixmap = self.asset_manager.load_pixmap(image_path)
+
             # Scale image to fit the dialog size
             label.setPixmap(pixmap.scaled(dialog.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation))
 
