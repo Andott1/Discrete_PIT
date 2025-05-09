@@ -55,7 +55,7 @@ jobs:
 
       - name: Build macOS .app with PyInstaller
         run: |
-          pyinstaller main.spec  # Builds .app for macOS
+          pyinstaller --clean --onedir main.spec  # Builds .app for macOS
 
       - name: Upload macOS .app
         uses: actions/upload-artifact@v4

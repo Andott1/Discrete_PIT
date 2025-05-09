@@ -122,5 +122,5 @@ elif sys.platform == 'darwin':
         bundle_identifier='com.cs223.lotto',
     )
 
-    # No need to run COLLECT here, it will be part of the .app structure already
+    # No need for COLLECT, BUNDLE does it all
     coll = app
