@@ -32,7 +32,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: Windows-App
-          path: dist/Let\'s\ Play\ Lotto\ v1.0.0b\ –\ Portable.exe
+          path: dist/LetsPlayLottoPortable.exe
 
   # Job for macOS
   build-macos:

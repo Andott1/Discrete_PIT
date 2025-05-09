@@ -75,7 +75,7 @@ if sys.platform == 'win32':
         a.zipfiles,
         a.datas,
         [],
-        name="Let's Play Lotto v1.0.0b – Portable",
+        name="LetsPlayLottoPortable",
         debug=False,
         bootloader_ignore_signals=False,
         strip=False,
