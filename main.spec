@@ -122,7 +122,7 @@ elif sys.platform == 'darwin':
 
     # Collect the EXE (not the BUNDLE)
     coll = COLLECT(
-        mac_exe,
+        app,
         a.binaries,
         a.zipfiles,
         a.datas,
