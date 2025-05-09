@@ -57,8 +57,13 @@ jobs:
         run: |
           pyinstaller --clean main.spec  # Builds .app for macOS
 
-      - name: Upload macOS .app
+      - name: Zip the .app bundle
+        run: |
+          cd dist
+          zip -r LetsPlayLotto-macOS.zip LetsPlayLotto.app
+
+      - name: Upload macOS .app zip
         uses: actions/upload-artifact@v4
         with:
           name: macOS-App
-          path: dist/LetsPlayLotto.app
+          path: dist/LetsPlayLotto-macOS.zip
