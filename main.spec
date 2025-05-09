@@ -97,6 +97,7 @@ if sys.platform == 'win32':
     )
 
 elif sys.platform == 'darwin':
+    # macOS executable creation
     mac_exe = EXE(
         pyz,
         a.scripts,
@@ -108,16 +109,18 @@ elif sys.platform == 'darwin':
         strip=False,
         upx=True,
         console=False,
-        icon='Assets/Icons/app_icon.icns',  # You should provide a .icns for macOS
+        icon='Assets/Icons/app_icon.icns',  # Ensure this is the correct path to your .icns file
     )
 
+    # Create the macOS app bundle
     app = BUNDLE(
         mac_exe,
         name='LetsPlayLotto.app',
-        icon='Assets/Icons/app_icon.icns',
-        bundle_identifier='com.yourdomain.lotto',
+        icon='Assets/Icons/app_icon.icns',  # Ensure this path is correct
+        bundle_identifier='com.cs223.lotto',
     )
 
+    # Collect the final app bundle
     coll = COLLECT(
         app,
         a.binaries,
