@@ -29,7 +29,7 @@ jobs:
           pyinstaller main.spec  # Builds .exe for Windows
 
       - name: Upload Windows .exe
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Windows-App
           path: dist/LetsPlayLottoPortable.exe
@@ -57,7 +57,7 @@ jobs:
           pyinstaller main.spec  # Builds .app for macOS
 
       - name: Upload macOS .app
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: macOS-App
           path: dist/LetsPlayLotto.app
