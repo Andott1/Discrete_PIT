@@ -101,8 +101,10 @@ elif sys.platform == 'darwin':
     mac_exe = EXE(
         pyz,
         a.scripts,
+        a.binaries,
+        a.zipfiles,
+        a.datas,
         [],
-        exclude_binaries=True,
         name="LetsPlayLotto",
         debug=False,
         bootloader_ignore_signals=False,
@@ -120,14 +122,5 @@ elif sys.platform == 'darwin':
         bundle_identifier='com.cs223.lotto',
     )
 
-    # Collect the EXE (not the BUNDLE)
-    coll = COLLECT(
-        app,
-        a.binaries,
-        a.zipfiles,
-        a.datas,
-        strip=False,
-        upx=True,
-        upx_exclude=[],
-        name='LetsPlayLotto'
-    )
+    # No need to run COLLECT here, it will be part of the .app structure already
+    coll = app
