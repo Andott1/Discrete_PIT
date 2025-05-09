@@ -109,20 +109,20 @@ elif sys.platform == 'darwin':
         strip=False,
         upx=True,
         console=False,
-        icon='Assets/Icons/app_icon.icns',  # Ensure this is the correct path to your .icns file
+        icon='Assets/Icons/app_icon.icns',
     )
 
     # Create the macOS app bundle
     app = BUNDLE(
         mac_exe,
         name='LetsPlayLotto.app',
-        icon='Assets/Icons/app_icon.icns',  # Ensure this path is correct
+        icon='Assets/Icons/app_icon.icns',
         bundle_identifier='com.cs223.lotto',
     )
 
-    # Collect the final app bundle
+    # Collect the EXE (not the BUNDLE)
     coll = COLLECT(
-        app,
+        mac_exe,
         a.binaries,
         a.zipfiles,
         a.datas,
