@@ -26,6 +26,8 @@ LOTTERY_TYPE_MAP = {
 }
 
 def fetch_latest_winning_numbers(lottery_type, from_date, to_date, fetch_limit):
+    print(f"[DEBUG] Fetching results for {lottery_type} from {from_date} to {to_date} with limit {fetch_limit}")
+    
     base_url = "https://www.pcso.gov.ph/SearchLottoResult.aspx"
 
     start_month, start_day, start_year = from_date.split('/')
@@ -40,6 +42,8 @@ def fetch_latest_winning_numbers(lottery_type, from_date, to_date, fetch_limit):
     end_month_name = MONTH_MAP[end_month]
 
     lottery_type_int = LOTTERY_TYPE_MAP.get(lottery_type, "0")
+    
+    print(f"[DEBUG] Using lottery type ID: {lottery_type_int}")
 
     session = requests.Session()
     response = session.get(base_url)
@@ -105,5 +109,10 @@ def fetch_latest_winning_numbers(lottery_type, from_date, to_date, fetch_limit):
     except requests.RequestException as e:
         print(f"Error fetching results: {e}")
         return []
+
+    print(f"[DEBUG] Scraped total results: {len(results)}")
+    
+    if not results:
+        print("[DEBUG] No results found for the specified criteria")
 
     return results

@@ -56,7 +56,7 @@ def export_data_to_csv(file_path, lucky_numbers, frequency_data, combinations_ta
         writer.writerow([])
 
         writer.writerow(["Lucky Numbers History:"])
-        writer.writerow(["Lotto Type", "1", "2", "3", "4", "5", "6"])
+        writer.writerow(["Lotto Type", "1", "2", "3", "4", "5", "6", "Fetch Limit", "Date Range"])
         
         if history_table and hasattr(history_table, 'rowCount') and history_table.rowCount() > 0:
             for row in range(history_table.rowCount()):
